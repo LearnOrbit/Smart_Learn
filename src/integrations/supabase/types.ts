@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      assignment_lo_mapping: {
+        Row: {
+          assignment_id: string
+          id: string
+          learning_outcome_id: string
+        }
+        Insert: {
+          assignment_id: string
+          id?: string
+          learning_outcome_id: string
+        }
+        Update: {
+          assignment_id?: string
+          id?: string
+          learning_outcome_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_lo_mapping_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_lo_mapping_learning_outcome_id_fkey"
+            columns: ["learning_outcome_id"]
+            isOneToOne: false
+            referencedRelation: "learning_outcomes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assignments: {
         Row: {
           created_at: string
@@ -44,6 +77,76 @@ export type Database = {
         }
         Relationships: []
       }
+      course_outcomes: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string
+          description: string
+          id: string
+          program_outcome_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by: string
+          description?: string
+          id?: string
+          program_outcome_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string
+          description?: string
+          id?: string
+          program_outcome_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_outcomes_program_outcome_id_fkey"
+            columns: ["program_outcome_id"]
+            isOneToOne: false
+            referencedRelation: "program_outcomes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      learning_outcomes: {
+        Row: {
+          code: string
+          course_outcome_id: string
+          created_at: string
+          created_by: string
+          description: string
+          id: string
+        }
+        Insert: {
+          code: string
+          course_outcome_id: string
+          created_at?: string
+          created_by: string
+          description?: string
+          id?: string
+        }
+        Update: {
+          code?: string
+          course_outcome_id?: string
+          created_at?: string
+          created_by?: string
+          description?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learning_outcomes_course_outcome_id_fkey"
+            columns: ["course_outcome_id"]
+            isOneToOne: false
+            referencedRelation: "course_outcomes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -65,6 +168,30 @@ export type Database = {
           id?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      program_outcomes: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string
+          description: string
+          id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by: string
+          description?: string
+          id?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string
+          description?: string
+          id?: string
         }
         Relationships: []
       }
