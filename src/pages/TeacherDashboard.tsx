@@ -9,8 +9,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Calendar, FileText, Users } from "lucide-react";
+import { Plus, Calendar, FileText, Users, Lightbulb } from "lucide-react";
 import { format } from "date-fns";
 
 export default function TeacherDashboard() {
@@ -21,7 +23,18 @@ export default function TeacherDashboard() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [selectedLOs, setSelectedLOs] = useState<string[]>([]);
   const [selectedAssignment, setSelectedAssignment] = useState<string | null>(null);
+
+  // Fetch learning outcomes for the dropdown
+  const { data: learningOutcomes = [] } = useQuery({
+    queryKey: ["learning_outcomes"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("learning_outcomes").select("*, course_outcomes(code)").order("code");
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const { data: assignments = [], isLoading } = useQuery({
     queryKey: ["assignments", user?.id],
@@ -37,22 +50,26 @@ export default function TeacherDashboard() {
     enabled: !!user,
   });
 
+  // Fetch LO mappings for all assignments
+  const { data: loMappings = [] } = useQuery({
+    queryKey: ["assignment_lo_mapping"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("assignment_lo_mapping")
+        .select("*, learning_outcomes(code, description)");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const { data: submissions = [] } = useQuery({
     queryKey: ["submissions", selectedAssignment],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("submissions")
-        .select("*, profiles!submissions_student_id_fkey(full_name)")
+        .select("*")
         .eq("assignment_id", selectedAssignment!);
-      if (error) {
-        // Fallback without join if foreign key doesn't exist
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from("submissions")
-          .select("*")
-          .eq("assignment_id", selectedAssignment!);
-        if (fallbackError) throw fallbackError;
-        return fallbackData;
-      }
+      if (error) throw error;
       return data;
     },
     enabled: !!selectedAssignment,
@@ -60,20 +77,32 @@ export default function TeacherDashboard() {
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("assignments").insert({
-        teacher_id: user!.id,
-        title,
-        description,
-        due_date: dueDate || null,
-      });
+      // Create assignment
+      const { data: assignment, error } = await supabase
+        .from("assignments")
+        .insert({ teacher_id: user!.id, title, description, due_date: dueDate || null })
+        .select()
+        .single();
       if (error) throw error;
+
+      // Create LO mappings
+      if (selectedLOs.length > 0) {
+        const mappings = selectedLOs.map((loId) => ({
+          assignment_id: assignment.id,
+          learning_outcome_id: loId,
+        }));
+        const { error: mapError } = await supabase.from("assignment_lo_mapping").insert(mappings);
+        if (mapError) throw mapError;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["assignment_lo_mapping"] });
       setOpen(false);
       setTitle("");
       setDescription("");
       setDueDate("");
+      setSelectedLOs([]);
       toast({ title: "Assignment created!" });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
@@ -81,10 +110,7 @@ export default function TeacherDashboard() {
 
   const gradeMutation = useMutation({
     mutationFn: async ({ id, grade, feedback }: { id: string; grade: string; feedback: string }) => {
-      const { error } = await supabase
-        .from("submissions")
-        .update({ grade, feedback })
-        .eq("id", id);
+      const { error } = await supabase.from("submissions").update({ grade, feedback }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -92,6 +118,15 @@ export default function TeacherDashboard() {
       toast({ title: "Graded!" });
     },
   });
+
+  const toggleLO = (loId: string) => {
+    setSelectedLOs((prev) =>
+      prev.includes(loId) ? prev.filter((id) => id !== loId) : [...prev, loId]
+    );
+  };
+
+  const getAssignmentLOs = (assignmentId: string) =>
+    loMappings.filter((m: any) => m.assignment_id === assignmentId);
 
   return (
     <DashboardLayout>
@@ -105,7 +140,7 @@ export default function TeacherDashboard() {
             <DialogTrigger asChild>
               <Button><Plus className="h-4 w-4 mr-2" />New Assignment</Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Create Assignment</DialogTitle>
               </DialogHeader>
@@ -121,6 +156,33 @@ export default function TeacherDashboard() {
                 <div className="space-y-2">
                   <Label>Due Date (optional)</Label>
                   <Input type="datetime-local" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1">
+                    <Lightbulb className="h-4 w-4" />
+                    Learning Outcomes
+                  </Label>
+                  {learningOutcomes.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No LOs defined yet. Go to Outcomes to create some.</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {learningOutcomes.map((lo: any) => (
+                        <button
+                          key={lo.id}
+                          type="button"
+                          onClick={() => toggleLO(lo.id)}
+                          className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition-all ${
+                            selectedLOs.includes(lo.id)
+                              ? "border-primary bg-primary/10 text-primary"
+                              : "border-border text-muted-foreground hover:border-muted-foreground/50"
+                          }`}
+                        >
+                          {lo.code}
+                          {lo.course_outcomes?.code && <span className="opacity-60">({lo.course_outcomes.code})</span>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <Button type="submit" className="w-full" disabled={createMutation.isPending}>
                   {createMutation.isPending ? "Creating..." : "Create Assignment"}
@@ -141,28 +203,41 @@ export default function TeacherDashboard() {
           </Card>
         ) : (
           <div className="grid gap-4">
-            {assignments.map((a) => (
-              <Card
-                key={a.id}
-                className={`cursor-pointer transition-all hover:shadow-md ${selectedAssignment === a.id ? "ring-2 ring-primary" : ""}`}
-                onClick={() => setSelectedAssignment(selectedAssignment === a.id ? null : a.id)}
-              >
-                <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="text-lg">{a.title}</CardTitle>
-                      <CardDescription className="mt-1">{a.description}</CardDescription>
-                    </div>
-                    {a.due_date && (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
-                        <Calendar className="h-3 w-3" />
-                        {format(new Date(a.due_date), "MMM d, yyyy")}
+            {assignments.map((a) => {
+              const assignmentLOs = getAssignmentLOs(a.id);
+              return (
+                <Card
+                  key={a.id}
+                  className={`cursor-pointer transition-all hover:shadow-md ${selectedAssignment === a.id ? "ring-2 ring-primary" : ""}`}
+                  onClick={() => setSelectedAssignment(selectedAssignment === a.id ? null : a.id)}
+                >
+                  <CardHeader className="pb-2">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <CardTitle className="text-lg">{a.title}</CardTitle>
+                        <CardDescription>{a.description}</CardDescription>
+                        {assignmentLOs.length > 0 && (
+                          <div className="flex flex-wrap gap-1 pt-1">
+                            {assignmentLOs.map((m: any) => (
+                              <Badge key={m.id} variant="secondary" className="text-xs">
+                                <Lightbulb className="h-3 w-3 mr-1" />
+                                {m.learning_outcomes?.code}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                </CardHeader>
-              </Card>
-            ))}
+                      {a.due_date && (
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
+                          <Calendar className="h-3 w-3" />
+                          {format(new Date(a.due_date), "MMM d, yyyy")}
+                        </div>
+                      )}
+                    </div>
+                  </CardHeader>
+                </Card>
+              );
+            })}
           </div>
         )}
 
@@ -174,9 +249,7 @@ export default function TeacherDashboard() {
             </div>
             {submissions.length === 0 ? (
               <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  No submissions yet.
-                </CardContent>
+                <CardContent className="py-8 text-center text-muted-foreground">No submissions yet.</CardContent>
               </Card>
             ) : (
               <div className="grid gap-3">
@@ -184,7 +257,7 @@ export default function TeacherDashboard() {
                   <Card key={s.id}>
                     <CardContent className="pt-4 space-y-3">
                       <div className="flex items-center justify-between">
-                        <p className="font-medium">{s.profiles?.full_name || s.student_id.slice(0, 8)}</p>
+                        <p className="font-medium">{s.student_id.slice(0, 8)}</p>
                         <p className="text-xs text-muted-foreground">{format(new Date(s.submitted_at), "MMM d, yyyy h:mm a")}</p>
                       </div>
                       <p className="text-sm bg-muted p-3 rounded-md">{s.content}</p>
