@@ -261,6 +261,19 @@ export default function TeacherDashboard() {
                         <p className="text-xs text-muted-foreground">{format(new Date(s.submitted_at), "MMM d, yyyy h:mm a")}</p>
                       </div>
                       <p className="text-sm bg-muted p-3 rounded-md">{s.content}</p>
+                      {s.image_path && (
+                        <img
+                          src={supabase.storage.from("submission-images").getPublicUrl(s.image_path).data.publicUrl}
+                          alt="Submission image"
+                          className="rounded-md max-h-48 object-contain border"
+                        />
+                      )}
+                      {s.extracted_text && (
+                        <div className="rounded-md bg-accent/30 border border-accent p-3 text-sm space-y-1">
+                          <p className="font-medium text-xs text-muted-foreground">OCR Extracted Text</p>
+                          <p className="whitespace-pre-wrap text-foreground">{s.extracted_text}</p>
+                        </div>
+                      )}
                       <div className="flex gap-2">
                         <Input
                           type="number"

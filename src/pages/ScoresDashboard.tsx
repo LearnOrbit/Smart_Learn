@@ -5,9 +5,8 @@ import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Target, BookMarked, Lightbulb, Users } from "lucide-react";
+import { Target, BookMarked, Lightbulb, Users, TrendingUp, TrendingDown, Minus, MessageSquare } from "lucide-react";
 
 interface ScoreRow {
   po_id: string;
@@ -21,13 +20,52 @@ interface ScoreRow {
   lo_score: number;
 }
 
+// Rule-based feedback generator
+function generateFeedback(
+  scores: { code: string; score: number; type: string }[]
+): string[] {
+  const feedback: string[] = [];
+  const weak = scores.filter((s) => s.score < 40);
+  const moderate = scores.filter((s) => s.score >= 40 && s.score < 70);
+  const strong = scores.filter((s) => s.score >= 70);
+
+  if (strong.length > 0) {
+    feedback.push(
+      `✅ Strong performance in ${strong.map((s) => s.code).join(", ")} (above 70%). Keep it up!`
+    );
+  }
+  if (moderate.length > 0) {
+    feedback.push(
+      `⚠️ Needs improvement in ${moderate.map((s) => s.code).join(", ")} (40-70%). Focus on practice and review.`
+    );
+  }
+  if (weak.length > 0) {
+    feedback.push(
+      `🔴 Critical attention needed for ${weak.map((s) => s.code).join(", ")} (below 40%). Consider revisiting fundamentals.`
+    );
+  }
+
+  const avg = scores.length > 0 ? scores.reduce((a, b) => a + b.score, 0) / scores.length : 0;
+  if (avg >= 70) {
+    feedback.push("📊 Overall: Excellent progress. You're on track for strong attainment.");
+  } else if (avg >= 40) {
+    feedback.push("📊 Overall: Moderate progress. Consistent effort will lead to improvement.");
+  } else if (scores.length > 0) {
+    feedback.push("📊 Overall: Below expectations. Seek additional support and dedicate more study time.");
+  }
+
+  return feedback;
+}
+
 function ScoreBar({ label, score, icon: Icon }: { label: string; score: number; icon: any }) {
   const color = score >= 70 ? "text-green-600" : score >= 40 ? "text-yellow-600" : "text-red-600";
+  const TrendIcon = score >= 70 ? TrendingUp : score >= 40 ? Minus : TrendingDown;
   return (
     <div className="flex items-center gap-3">
       <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
       <span className="text-sm font-medium w-16 shrink-0">{label}</span>
       <Progress value={score} className="flex-1 h-2" />
+      <TrendIcon className={`h-4 w-4 shrink-0 ${color}`} />
       <span className={`text-sm font-bold w-12 text-right ${color}`}>{score.toFixed(1)}%</span>
     </div>
   );
@@ -44,6 +82,22 @@ function StudentScoresView({ studentId }: { studentId: string }) {
     enabled: !!studentId,
   });
 
+  // Fetch submission history for moving average
+  const { data: submissions = [] } = useQuery({
+    queryKey: ["student_submissions_history", studentId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("submissions")
+        .select("marks, submitted_at, assignment_id")
+        .eq("student_id", studentId)
+        .not("marks", "is", null)
+        .order("submitted_at", { ascending: true });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!studentId,
+  });
+
   if (isLoading) return <p className="text-muted-foreground">Calculating scores...</p>;
   if (scores.length === 0) return (
     <Card>
@@ -53,7 +107,7 @@ function StudentScoresView({ studentId }: { studentId: string }) {
     </Card>
   );
 
-  // Deduplicate POs, COs, LOs
+  // Deduplicate
   const poMap = new Map<string, { code: string; score: number }>();
   const coMap = new Map<string, { code: string; score: number }>();
   const loMap = new Map<string, { code: string; score: number }>();
@@ -64,8 +118,73 @@ function StudentScoresView({ studentId }: { studentId: string }) {
     if (!loMap.has(r.lo_id)) loMap.set(r.lo_id, { code: r.lo_code, score: Number(r.lo_score) });
   });
 
+  // Compute moving average (last 3 submissions)
+  const recentMarks = submissions.slice(-3).map((s: any) => Number(s.marks));
+  const movingAvg = recentMarks.length > 0
+    ? recentMarks.reduce((a: number, b: number) => a + b, 0) / recentMarks.length
+    : null;
+
+  const allMarks = submissions.map((s: any) => Number(s.marks));
+  const overallAvg = allMarks.length > 0
+    ? allMarks.reduce((a: number, b: number) => a + b, 0) / allMarks.length
+    : null;
+
+  // Trend detection
+  const trend = movingAvg !== null && overallAvg !== null
+    ? movingAvg > overallAvg + 5 ? "improving" : movingAvg < overallAvg - 5 ? "declining" : "stable"
+    : null;
+
+  // Collect all scores for feedback
+  const allScores = [
+    ...[...loMap.entries()].map(([, { code, score }]) => ({ code, score, type: "LO" })),
+  ];
+  const feedbackMessages = generateFeedback(allScores);
+
   return (
     <div className="space-y-6">
+      {/* Performance Summary */}
+      {(movingAvg !== null || feedbackMessages.length > 0) && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" /> Performance Insights
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {movingAvg !== null && (
+              <div className="flex flex-wrap gap-4 text-sm">
+                <div className="flex items-center gap-2 rounded-md bg-muted px-3 py-2">
+                  <span className="text-muted-foreground">Recent Avg (last 3):</span>
+                  <span className="font-bold">{movingAvg.toFixed(1)}</span>
+                </div>
+                {overallAvg !== null && (
+                  <div className="flex items-center gap-2 rounded-md bg-muted px-3 py-2">
+                    <span className="text-muted-foreground">Overall Avg:</span>
+                    <span className="font-bold">{overallAvg.toFixed(1)}</span>
+                  </div>
+                )}
+                {trend && (
+                  <div className="flex items-center gap-2 rounded-md bg-muted px-3 py-2">
+                    <span className="text-muted-foreground">Trend:</span>
+                    {trend === "improving" && <TrendingUp className="h-4 w-4 text-green-600" />}
+                    {trend === "declining" && <TrendingDown className="h-4 w-4 text-red-600" />}
+                    {trend === "stable" && <Minus className="h-4 w-4 text-yellow-600" />}
+                    <span className="font-medium capitalize">{trend}</span>
+                  </div>
+                )}
+              </div>
+            )}
+            {feedbackMessages.length > 0 && (
+              <div className="space-y-1.5 pt-1">
+                {feedbackMessages.map((msg, i) => (
+                  <p key={i} className="text-sm text-foreground">{msg}</p>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
@@ -112,7 +231,6 @@ export default function ScoresDashboard() {
   const { role, user } = useAuth();
   const [selectedStudent, setSelectedStudent] = useState<string>("");
 
-  // For teachers: fetch all students
   const { data: students = [] } = useQuery({
     queryKey: ["student_profiles"],
     queryFn: async () => {
@@ -121,9 +239,7 @@ export default function ScoresDashboard() {
         .select("user_id")
         .eq("role", "student");
       if (error) throw error;
-
       if (!roles.length) return [];
-
       const { data: profiles, error: pErr } = await supabase
         .from("profiles")
         .select("user_id, full_name")

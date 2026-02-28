@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -8,14 +8,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, FileText, CheckCircle, Clock } from "lucide-react";
+import { Calendar, FileText, CheckCircle, Clock, Upload, Image, Loader2 } from "lucide-react";
 import { format } from "date-fns";
+import { createWorker } from "tesseract.js";
 
 export default function StudentDashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [submissionContent, setSubmissionContent] = useState<Record<string, string>>({});
+  const [selectedFiles, setSelectedFiles] = useState<Record<string, File | null>>({});
+  const [ocrProcessing, setOcrProcessing] = useState<Record<string, boolean>>({});
+  const [ocrText, setOcrText] = useState<Record<string, string>>({});
+  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const { data: assignments = [], isLoading } = useQuery({
     queryKey: ["assignments"],
@@ -42,18 +47,54 @@ export default function StudentDashboard() {
     enabled: !!user,
   });
 
+  const handleImageSelect = async (assignmentId: string, file: File) => {
+    setSelectedFiles((prev) => ({ ...prev, [assignmentId]: file }));
+    setOcrProcessing((prev) => ({ ...prev, [assignmentId]: true }));
+
+    try {
+      const worker = await createWorker("eng");
+      const { data: { text } } = await worker.recognize(file);
+      await worker.terminate();
+      setOcrText((prev) => ({ ...prev, [assignmentId]: text }));
+      toast({ title: "OCR Complete", description: "Text extracted from image." });
+    } catch (err: any) {
+      toast({ title: "OCR Failed", description: err.message, variant: "destructive" });
+    } finally {
+      setOcrProcessing((prev) => ({ ...prev, [assignmentId]: false }));
+    }
+  };
+
   const submitMutation = useMutation({
     mutationFn: async ({ assignmentId, content }: { assignmentId: string; content: string }) => {
+      let imagePath: string | null = null;
+      const file = selectedFiles[assignmentId];
+      const extractedText = ocrText[assignmentId] || null;
+
+      // Upload image if present
+      if (file) {
+        const ext = file.name.split(".").pop();
+        const path = `${user!.id}/${assignmentId}-${Date.now()}.${ext}`;
+        const { error: uploadError } = await supabase.storage
+          .from("submission-images")
+          .upload(path, file);
+        if (uploadError) throw uploadError;
+        imagePath = path;
+      }
+
       const { error } = await supabase.from("submissions").insert({
         assignment_id: assignmentId,
         student_id: user!.id,
         content,
+        image_path: imagePath,
+        extracted_text: extractedText,
       });
       if (error) throw error;
     },
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ["my-submissions"] });
       setSubmissionContent((prev) => ({ ...prev, [vars.assignmentId]: "" }));
+      setSelectedFiles((prev) => ({ ...prev, [vars.assignmentId]: null }));
+      setOcrText((prev) => ({ ...prev, [vars.assignmentId]: "" }));
       toast({ title: "Submitted!" });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
@@ -61,6 +102,11 @@ export default function StudentDashboard() {
 
   const getSubmission = (assignmentId: string) =>
     mySubmissions.find((s) => s.assignment_id === assignmentId);
+
+  const getImageUrl = (path: string) => {
+    const { data } = supabase.storage.from("submission-images").getPublicUrl(path);
+    return data.publicUrl;
+  };
 
   return (
     <DashboardLayout>
@@ -123,15 +169,24 @@ export default function StudentDashboard() {
                       </div>
                     )}
                     {isSubmitted ? (
-                      <div className="rounded-md bg-muted p-3 text-sm">
-                        <p className="text-muted-foreground text-xs mb-1">Your submission</p>
-                        <p>{submission.content}</p>
+                      <div className="space-y-2">
+                        <div className="rounded-md bg-muted p-3 text-sm">
+                          <p className="text-muted-foreground text-xs mb-1">Your submission</p>
+                          <p>{submission.content}</p>
+                        </div>
+                        {submission.image_path && (
+                          <img
+                            src={getImageUrl(submission.image_path)}
+                            alt="Submission"
+                            className="rounded-md max-h-48 object-contain border"
+                          />
+                        )}
                       </div>
                     ) : (
                       <form
                         onSubmit={(e) => {
                           e.preventDefault();
-                          const content = submissionContent[a.id]?.trim();
+                          const content = submissionContent[a.id]?.trim() || ocrText[a.id]?.trim() || "";
                           if (content) submitMutation.mutate({ assignmentId: a.id, content });
                         }}
                         className="space-y-3"
@@ -144,10 +199,56 @@ export default function StudentDashboard() {
                           }
                           rows={3}
                         />
+
+                        {/* Image upload section */}
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            ref={(el) => { fileInputRefs.current[a.id] = el; }}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleImageSelect(a.id, file);
+                            }}
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => fileInputRefs.current[a.id]?.click()}
+                            disabled={ocrProcessing[a.id]}
+                          >
+                            {ocrProcessing[a.id] ? (
+                              <><Loader2 className="h-4 w-4 mr-1 animate-spin" />Processing OCR...</>
+                            ) : (
+                              <><Upload className="h-4 w-4 mr-1" />Upload Image</>
+                            )}
+                          </Button>
+                          {selectedFiles[a.id] && (
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Image className="h-3 w-3" />
+                              {selectedFiles[a.id]!.name}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Show OCR extracted text */}
+                        {ocrText[a.id] && (
+                          <div className="rounded-md bg-accent/30 border border-accent p-3 text-sm space-y-1">
+                            <p className="font-medium text-xs text-muted-foreground">Extracted Text (OCR)</p>
+                            <p className="whitespace-pre-wrap text-foreground">{ocrText[a.id]}</p>
+                          </div>
+                        )}
+
                         <Button
                           type="submit"
                           size="sm"
-                          disabled={submitMutation.isPending || !submissionContent[a.id]?.trim()}
+                          disabled={
+                            submitMutation.isPending ||
+                            ocrProcessing[a.id] ||
+                            (!submissionContent[a.id]?.trim() && !ocrText[a.id]?.trim())
+                          }
                         >
                           {submitMutation.isPending ? "Submitting..." : "Submit"}
                         </Button>
