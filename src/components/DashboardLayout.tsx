@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, LogOut, FileText, Target } from "lucide-react";
+import { GraduationCap, LogOut, FileText, Target, BarChart3 } from "lucide-react";
 import { ReactNode } from "react";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
@@ -18,8 +18,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     ? [
         { path: "/dashboard", label: "Assignments", icon: FileText },
         { path: "/outcomes", label: "Outcomes", icon: Target },
+        { path: "/scores", label: "Scores", icon: BarChart3 },
       ]
-    : [{ path: "/dashboard", label: "Assignments", icon: FileText }];
+    : [
+        { path: "/dashboard", label: "Assignments", icon: FileText },
+        { path: "/scores", label: "My Scores", icon: BarChart3 },
+      ];
 
   return (
     <div className="min-h-screen bg-background">
