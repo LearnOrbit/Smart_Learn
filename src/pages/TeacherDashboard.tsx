@@ -109,8 +109,8 @@ export default function TeacherDashboard() {
   });
 
   const gradeMutation = useMutation({
-    mutationFn: async ({ id, grade, feedback }: { id: string; grade: string; feedback: string }) => {
-      const { error } = await supabase.from("submissions").update({ grade, feedback }).eq("id", id);
+    mutationFn: async ({ id, marks, grade, feedback }: { id: string; marks: number | null; grade: string; feedback: string }) => {
+      const { error } = await supabase.from("submissions").update({ marks, grade, feedback }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -263,12 +263,22 @@ export default function TeacherDashboard() {
                       <p className="text-sm bg-muted p-3 rounded-md">{s.content}</p>
                       <div className="flex gap-2">
                         <Input
-                          placeholder="Grade"
+                          type="number"
+                          placeholder="Marks"
+                          defaultValue={s.marks ?? ""}
+                          className="w-24"
+                          onBlur={(e) => {
+                            const val = e.target.value ? Number(e.target.value) : null;
+                            gradeMutation.mutate({ id: s.id, marks: val, grade: s.grade || "", feedback: s.feedback || "" });
+                          }}
+                        />
+                        <Input
+                          placeholder="Grade (e.g. A+)"
                           defaultValue={s.grade || ""}
                           className="w-24"
                           onBlur={(e) => {
                             if (e.target.value !== (s.grade || "")) {
-                              gradeMutation.mutate({ id: s.id, grade: e.target.value, feedback: s.feedback || "" });
+                              gradeMutation.mutate({ id: s.id, marks: s.marks ?? null, grade: e.target.value, feedback: s.feedback || "" });
                             }
                           }}
                         />
@@ -278,7 +288,7 @@ export default function TeacherDashboard() {
                           className="flex-1"
                           onBlur={(e) => {
                             if (e.target.value !== (s.feedback || "")) {
-                              gradeMutation.mutate({ id: s.id, grade: s.grade || "", feedback: e.target.value });
+                              gradeMutation.mutate({ id: s.id, marks: s.marks ?? null, grade: s.grade || "", feedback: e.target.value });
                             }
                           }}
                         />

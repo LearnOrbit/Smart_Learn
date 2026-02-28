@@ -53,6 +53,7 @@ export type Database = {
           description: string
           due_date: string | null
           id: string
+          max_marks: number | null
           teacher_id: string
           title: string
           updated_at: string
@@ -62,6 +63,7 @@ export type Database = {
           description?: string
           due_date?: string | null
           id?: string
+          max_marks?: number | null
           teacher_id: string
           title: string
           updated_at?: string
@@ -71,6 +73,7 @@ export type Database = {
           description?: string
           due_date?: string | null
           id?: string
+          max_marks?: number | null
           teacher_id?: string
           title?: string
           updated_at?: string
@@ -202,6 +205,7 @@ export type Database = {
           feedback: string | null
           grade: string | null
           id: string
+          marks: number | null
           student_id: string
           submitted_at: string
           updated_at: string
@@ -212,6 +216,7 @@ export type Database = {
           feedback?: string | null
           grade?: string | null
           id?: string
+          marks?: number | null
           student_id: string
           submitted_at?: string
           updated_at?: string
@@ -222,6 +227,7 @@ export type Database = {
           feedback?: string | null
           grade?: string | null
           id?: string
+          marks?: number | null
           student_id?: string
           submitted_at?: string
           updated_at?: string
@@ -259,6 +265,32 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calc_co_score: {
+        Args: { _co_id: string; _student_id: string }
+        Returns: number
+      }
+      calc_lo_score: {
+        Args: { _lo_id: string; _student_id: string }
+        Returns: number
+      }
+      calc_po_score: {
+        Args: { _po_id: string; _student_id: string }
+        Returns: number
+      }
+      get_student_scores: {
+        Args: { _student_id: string }
+        Returns: {
+          co_code: string
+          co_id: string
+          co_score: number
+          lo_code: string
+          lo_id: string
+          lo_score: number
+          po_code: string
+          po_id: string
+          po_score: number
+        }[]
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
