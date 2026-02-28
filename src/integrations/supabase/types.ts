@@ -202,9 +202,11 @@ export type Database = {
         Row: {
           assignment_id: string
           content: string
+          extracted_text: string | null
           feedback: string | null
           grade: string | null
           id: string
+          image_path: string | null
           marks: number | null
           student_id: string
           submitted_at: string
@@ -213,9 +215,11 @@ export type Database = {
         Insert: {
           assignment_id: string
           content?: string
+          extracted_text?: string | null
           feedback?: string | null
           grade?: string | null
           id?: string
+          image_path?: string | null
           marks?: number | null
           student_id: string
           submitted_at?: string
@@ -224,9 +228,11 @@ export type Database = {
         Update: {
           assignment_id?: string
           content?: string
+          extracted_text?: string | null
           feedback?: string | null
           grade?: string | null
           id?: string
+          image_path?: string | null
           marks?: number | null
           student_id?: string
           submitted_at?: string
