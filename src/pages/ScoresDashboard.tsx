@@ -1,12 +1,16 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiClient } from "@/integrations/api/client";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { Target, BookMarked, Lightbulb, Users, TrendingUp, TrendingDown, Minus, MessageSquare } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { Target, BookMarked, Lightbulb, Users, TrendingUp, TrendingDown, Minus, MessageSquare, ClipboardEdit, Save, PlusCircle } from "lucide-react";
 
 interface ScoreRow {
   po_id: string;
@@ -57,7 +61,200 @@ function generateFeedback(
   return feedback;
 }
 
-function ScoreBar({ label, score, icon: Icon }: { label: string; score: number; icon: any }) {
+interface SubmissionEntry {
+  id: string;
+  assignment_id: string;
+  student_id: string;
+  content: string;
+  marks: number | null;
+  grade: string | null;
+  feedback: string | null;
+  submitted_at: string;
+}
+
+interface AssignmentEntry {
+  id: string;
+  title: string;
+  description: string;
+}
+
+// ── Grade Submissions Panel (teacher only) ────────────────────────
+function GradeSubmissionsPanel({ studentId }: { studentId: string }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // All assignments
+  const { data: assignments = [] } = useQuery({
+    queryKey: ["all_assignments"],
+    queryFn: async () => {
+      const { data, error } = await apiClient.get("/assignments");
+      if (error) throw error;
+      return (data || []) as AssignmentEntry[];
+    },
+  });
+
+  // Student's existing submissions
+  const { data: submissions = [] } = useQuery({
+    queryKey: ["student_submissions", studentId],
+    queryFn: async () => {
+      const { data, error } = await apiClient.get(`/submissions?student_id=${studentId}`);
+      if (error) throw error;
+      return (data || []) as SubmissionEntry[];
+    },
+    enabled: !!studentId,
+  });
+
+  // Grade / update a submission
+  const gradeMutation = useMutation({
+    mutationFn: async ({ id, marks, grade, feedback }: { id: string; marks: number | null; grade: string; feedback: string }) => {
+      const { error } = await apiClient.put(`/submissions/${id}`, { marks, grade, feedback });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["student_submissions", studentId] });
+      queryClient.invalidateQueries({ queryKey: ["student_scores", studentId] });
+      queryClient.invalidateQueries({ queryKey: ["student_submissions_history", studentId] });
+      toast({ title: "Score saved!" });
+    },
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  // Create a submission on behalf of the student (so teacher can then grade it)
+  const createMutation = useMutation({
+    mutationFn: async (assignmentId: string) => {
+      const { error } = await apiClient.post("/submissions", {
+        assignment_id: assignmentId,
+        student_id: studentId,
+        content: "Created by teacher for grading",
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["student_submissions", studentId] });
+      toast({ title: "Submission created — enter marks below" });
+    },
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  // Map assignment_id -> submission for quick lookup
+  const subByAssignment = new Map<string, SubmissionEntry>();
+  submissions.forEach((s) => subByAssignment.set(s.assignment_id, s));
+
+  // Local editable state keyed by submission id
+  const [edits, setEdits] = useState<Record<string, { marks: string; grade: string; feedback: string }>>({});
+
+  const getEdit = (s: SubmissionEntry) => edits[s.id] || {
+    marks: s.marks != null ? String(s.marks) : "",
+    grade: s.grade || "",
+    feedback: s.feedback || "",
+  };
+
+  const setField = (id: string, field: string, value: string) => {
+    setEdits((prev) => ({
+      ...prev,
+      [id]: { ...getEditById(id), [field]: value },
+    }));
+  };
+
+  const getEditById = (id: string) => {
+    const s = submissions.find((x) => x.id === id);
+    return edits[id] || {
+      marks: s?.marks != null ? String(s.marks) : "",
+      grade: s?.grade || "",
+      feedback: s?.feedback || "",
+    };
+  };
+
+  const handleSave = (sub: SubmissionEntry) => {
+    const e = getEdit(sub);
+    gradeMutation.mutate({
+      id: sub.id,
+      marks: e.marks ? Number(e.marks) : null,
+      grade: e.grade,
+      feedback: e.feedback,
+    });
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center gap-2">
+          <ClipboardEdit className="h-4 w-4" /> Enter / Edit Scores
+        </CardTitle>
+        <CardDescription>Grade each assignment. Scores auto-compute into LO → CO → PO attainment above.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {assignments.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No assignments found. Create assignments first in the Teacher Dashboard.</p>
+        ) : (
+          <div className="divide-y">
+            {assignments.map((a) => {
+              const sub = subByAssignment.get(a.id);
+              return (
+                <div key={a.id} className="py-3 first:pt-0 last:pb-0">
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <p className="font-medium text-sm">{a.title}</p>
+                      <p className="text-xs text-muted-foreground">{a.description}</p>
+                    </div>
+                    {sub ? (
+                      <Badge variant={sub.marks != null ? "default" : "secondary"} className="text-xs">
+                        {sub.marks != null ? `${sub.marks} marks` : "Not graded"}
+                      </Badge>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => createMutation.mutate(a.id)}
+                        disabled={createMutation.isPending}
+                      >
+                        <PlusCircle className="h-3 w-3 mr-1" />
+                        Add Entry
+                      </Button>
+                    )}
+                  </div>
+                  {sub && (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        placeholder="Marks"
+                        className="w-24 h-8 text-sm"
+                        value={getEdit(sub).marks}
+                        onChange={(e) => setField(sub.id, "marks", e.target.value)}
+                      />
+                      <Input
+                        placeholder="Grade"
+                        className="w-20 h-8 text-sm"
+                        value={getEdit(sub).grade}
+                        onChange={(e) => setField(sub.id, "grade", e.target.value)}
+                      />
+                      <Input
+                        placeholder="Feedback"
+                        className="flex-1 h-8 text-sm"
+                        value={getEdit(sub).feedback}
+                        onChange={(e) => setField(sub.id, "feedback", e.target.value)}
+                      />
+                      <Button
+                        size="sm"
+                        className="h-8"
+                        onClick={() => handleSave(sub)}
+                        disabled={gradeMutation.isPending}
+                      >
+                        <Save className="h-3 w-3 mr-1" /> Save
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ScoreBar({ label, score, icon: Icon }: { label: string; score: number; icon: React.ElementType }) {
   const color = score >= 70 ? "text-green-600" : score >= 40 ? "text-yellow-600" : "text-red-600";
   const TrendIcon = score >= 70 ? TrendingUp : score >= 40 ? Minus : TrendingDown;
   return (
@@ -75,7 +272,7 @@ function StudentScoresView({ studentId }: { studentId: string }) {
   const { data: scores = [], isLoading } = useQuery({
     queryKey: ["student_scores", studentId],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_student_scores", { _student_id: studentId });
+      const { data, error } = await apiClient.get(`/student-scores/${studentId}`);
       if (error) throw error;
       return (data as ScoreRow[]) || [];
     },
@@ -86,23 +283,32 @@ function StudentScoresView({ studentId }: { studentId: string }) {
   const { data: submissions = [] } = useQuery({
     queryKey: ["student_submissions_history", studentId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("submissions")
-        .select("marks, submitted_at, assignment_id")
-        .eq("student_id", studentId)
-        .not("marks", "is", null)
-        .order("submitted_at", { ascending: true });
+      const { data, error } = await apiClient.get(`/submissions?student_id=${studentId}`);
       if (error) throw error;
-      return data || [];
+      // Filter to only graded submissions
+      return (data || []).filter((s: any) => s.marks != null);
     },
     enabled: !!studentId,
   });
 
+  // Fetch assignment titles for display
+  const { data: allAssignments = [] } = useQuery({
+    queryKey: ["all_assignments"],
+    queryFn: async () => {
+      const { data, error } = await apiClient.get("/assignments");
+      if (error) throw error;
+      return (data || []) as AssignmentEntry[];
+    },
+  });
+
+  const assignmentMap = new Map(allAssignments.map((a) => [a.id, a.title]));
+
   if (isLoading) return <p className="text-muted-foreground">Calculating scores...</p>;
-  if (scores.length === 0) return (
+
+  if (scores.length === 0 && submissions.length === 0) return (
     <Card>
       <CardContent className="py-8 text-center text-muted-foreground">
-        No outcome data available yet. Scores appear once assignments are graded.
+        No scores available yet. Scores appear once assignments are graded.
       </CardContent>
     </Card>
   );
@@ -142,6 +348,42 @@ function StudentScoresView({ studentId }: { studentId: string }) {
 
   return (
     <div className="space-y-6">
+      {/* Graded Submissions */}
+      {submissions.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <ClipboardEdit className="h-4 w-4" /> Graded Assignments
+            </CardTitle>
+            <CardDescription>Marks, grades, and feedback from your teacher</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="divide-y">
+              {submissions.map((s: any) => (
+                <div key={s.id} className="py-3 first:pt-0 last:pb-0 flex items-center justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-sm truncate">
+                      {assignmentMap.get(s.assignment_id) || "Assignment"}
+                    </p>
+                    {s.feedback && (
+                      <p className="text-xs text-muted-foreground mt-0.5 truncate">{s.feedback}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {s.marks != null && (
+                      <Badge variant="default" className="text-xs">{s.marks} marks</Badge>
+                    )}
+                    {s.grade && (
+                      <Badge variant="secondary" className="text-xs">{s.grade}</Badge>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Performance Summary */}
       {(movingAvg !== null || feedbackMessages.length > 0) && (
         <Card>
@@ -185,44 +427,48 @@ function StudentScoresView({ studentId }: { studentId: string }) {
         </Card>
       )}
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Target className="h-4 w-4" /> Program Outcomes
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {[...poMap.entries()].map(([id, { code, score }]) => (
-            <ScoreBar key={id} label={code} score={score} icon={Target} />
-          ))}
-        </CardContent>
-      </Card>
+      {scores.length > 0 && (
+        <>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Target className="h-4 w-4" /> Program Outcomes
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {[...poMap.entries()].map(([id, { code, score }]) => (
+                <ScoreBar key={id} label={code} score={score} icon={Target} />
+              ))}
+            </CardContent>
+          </Card>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <BookMarked className="h-4 w-4" /> Course Outcomes
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {[...coMap.entries()].map(([id, { code, score }]) => (
-            <ScoreBar key={id} label={code} score={score} icon={BookMarked} />
-          ))}
-        </CardContent>
-      </Card>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <BookMarked className="h-4 w-4" /> Course Outcomes
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {[...coMap.entries()].map(([id, { code, score }]) => (
+                <ScoreBar key={id} label={code} score={score} icon={BookMarked} />
+              ))}
+            </CardContent>
+          </Card>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Lightbulb className="h-4 w-4" /> Learning Outcomes
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {[...loMap.entries()].map(([id, { code, score }]) => (
-            <ScoreBar key={id} label={code} score={score} icon={Lightbulb} />
-          ))}
-        </CardContent>
-      </Card>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Lightbulb className="h-4 w-4" /> Learning Outcomes
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {[...loMap.entries()].map(([id, { code, score }]) => (
+                <ScoreBar key={id} label={code} score={score} icon={Lightbulb} />
+              ))}
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   );
 }
@@ -234,18 +480,9 @@ export default function ScoresDashboard() {
   const { data: students = [] } = useQuery({
     queryKey: ["student_profiles"],
     queryFn: async () => {
-      const { data: roles, error } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .eq("role", "student");
+      const { data, error } = await apiClient.get("/students-list");
       if (error) throw error;
-      if (!roles.length) return [];
-      const { data: profiles, error: pErr } = await supabase
-        .from("profiles")
-        .select("user_id, full_name")
-        .in("user_id", roles.map((r) => r.user_id));
-      if (pErr) throw pErr;
-      return profiles || [];
+      return (data || []).map((s: any) => ({ user_id: s.id, full_name: s.name }));
     },
     enabled: role === "teacher",
   });
@@ -288,7 +525,10 @@ export default function ScoresDashboard() {
         </div>
 
         {selectedStudent ? (
-          <StudentScoresView studentId={selectedStudent} />
+          <div className="space-y-6">
+            <GradeSubmissionsPanel studentId={selectedStudent} />
+            <StudentScoresView studentId={selectedStudent} />
+          </div>
         ) : (
           <Card>
             <CardContent className="py-8 text-center text-muted-foreground">
