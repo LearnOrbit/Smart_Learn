@@ -1,4 +1,5 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { getClassrooms } from "@/utils/mockClassrooms";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/integrations/api/client";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -16,12 +17,13 @@ import {
   Plus, Trash2, FileText, Upload, Loader2, Sparkles,
   BookOpen, ClipboardList, GraduationCap, Lightbulb,
   ChevronDown, ChevronUp, FileCheck, Send, BookMarked,
-  Eye, CheckCircle2, AlertCircle,
+  Eye, CheckCircle2, AlertCircle, Users,
 } from "lucide-react";
 
-interface COItem { id: string; code: string; description: string }
-interface LOItem { id: string; code: string; description: string; course_outcome_id: string | null }
+interface COItem { id: string; code: string; description: string; subject_id: string | null }
+interface LOItem { id: string; code: string; description: string; course_outcome_id: string | null; subject_id: string | null }
 interface SubjectItem { id: string; code: string; name: string }
+interface ClassroomItem { id: string; name: string; code: string; student_count?: number }
 interface GeneratedQuestion {
   question_number: number;
   question_text: string;
@@ -44,6 +46,9 @@ export default function AssignmentCreator() {
   const [description, setDescription] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [subjectId, setSubjectId] = useState("none");
+  // ── NEW: classroom selection ──
+  const [classroomId, setClassroomId] = useState("none");
+  const [localClassrooms, setLocalClassrooms] = useState<ClassroomItem[]>([]);
   const [selectedLOs, setSelectedLOs] = useState<string[]>([]);
   const [questions, setQuestions] = useState<GeneratedQuestion[]>([]);
   const [generationMethod, setGenerationMethod] = useState("manual");
@@ -65,6 +70,10 @@ export default function AssignmentCreator() {
   const [extracting, setExtracting] = useState(false);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
+  // ─── Past Papers ───
+  const [pastPaperUploading, setPastPaperUploading] = useState(false);
+  const pastPaperFileRef = useRef<HTMLInputElement | null>(null);
+
   // ─── Queries ───
   const { data: courseOutcomes = [] } = useQuery<COItem[]>({
     queryKey: ["course-outcomes"],
@@ -81,12 +90,43 @@ export default function AssignmentCreator() {
     queryFn: async () => { const { data, error } = await apiClient.get("/subjects"); if (error) throw error; return data ?? []; },
   });
 
-  // ─── Group LOs by parent CO ───
-  const losByCO = courseOutcomes.map(co => ({
+  // ── Load classrooms from localStorage (same source as TeacherDashboard) ──
+  useEffect(() => {
+    const load = () => {
+      const cls = getClassrooms();
+      setLocalClassrooms(cls.map(c => ({ id: c.id, name: c.name, code: c.code })));
+    };
+    load();
+    window.addEventListener("classroomSync", load);
+    window.addEventListener("storage", load);
+    return () => {
+      window.removeEventListener("classroomSync", load);
+      window.removeEventListener("storage", load);
+    };
+  }, []);
+  const classrooms = localClassrooms;
+
+  const { data: pastQuestions = [], refetch: refetchPastPapers } = useQuery({
+    queryKey: ["past-papers", subjectId],
+    queryFn: async () => {
+      if (!subjectId || subjectId === "none") return [];
+      const { data, error } = await apiClient.get(`/subjects/${subjectId}/past-papers`);
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: subjectId !== "none",
+  });
+
+  const subjectsWithOutcomes = subjects;
+
+  const filteredCOs = subjectId === "none" ? courseOutcomes : courseOutcomes.filter(co => co.subject_id === subjectId);
+  const filteredLOs = subjectId === "none" ? learningOutcomes : learningOutcomes.filter(lo => lo.subject_id === subjectId);
+
+  const losByCO = filteredCOs.map(co => ({
     co,
-    los: learningOutcomes.filter(lo => lo.course_outcome_id === co.id),
+    los: filteredLOs.filter(lo => lo.course_outcome_id === co.id),
   })).filter(g => g.los.length > 0);
-  const ungroupedLOs = learningOutcomes.filter(lo => !lo.course_outcome_id);
+  const ungroupedLOs = filteredLOs.filter(lo => !lo.course_outcome_id && (!subjectId || subjectId === "none" || lo.subject_id === subjectId));
 
   // ─── Generate from COs ───
   const genCOMutation = useMutation({
@@ -128,6 +168,47 @@ export default function AssignmentCreator() {
       toast({ title: `${data.questions.length} questions generated!`, description: "Review and approve to send to students." });
     },
     onError: (e: Error) => toast({ title: "Generation failed", description: e.message, variant: "destructive" }),
+  });
+
+  // ─── Past Paper Mutations ───
+  const uploadPastPaperMutation = useMutation({
+    mutationFn: async (file: File) => {
+      if (subjectId === "none") throw new Error("Select a subject first");
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch(`http://localhost:8000/api/subjects/${subjectId}/past-papers/upload`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${localStorage.getItem("token") || ""}` },
+        body: formData,
+      });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null);
+        throw new Error(errorData?.detail || "Upload failed");
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({ title: "Past Paper Uploaded", description: data.message });
+      refetchPastPapers();
+    },
+    onError: (err: any) => toast({ title: "Upload Failed", description: err.message, variant: "destructive" }),
+    onSettled: () => {
+      setPastPaperUploading(false);
+      if (pastPaperFileRef.current) pastPaperFileRef.current.value = "";
+    }
+  });
+
+  const clearPastPapersMutation = useMutation({
+    mutationFn: async () => {
+      if (subjectId === "none") throw new Error("Select a subject first");
+      const { error } = await apiClient.delete(`/subjects/${subjectId}/past-papers`);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Past Papers Cleared", description: "All past questions for this subject have been removed." });
+      refetchPastPapers();
+    },
+    onError: (err: any) => toast({ title: "Clear Failed", description: err.message, variant: "destructive" })
   });
 
   // ─── File extraction ───
@@ -172,7 +253,7 @@ export default function AssignmentCreator() {
     } finally { setBulkSolutionUploading(false); }
   };
 
-  // ─── Create assignment (with status) ───
+  // ─── Create assignment (with classroom_id) ───
   const createMutation = useMutation({
     mutationFn: async (status: AssignmentStatus) => {
       const totalMarks = questions.reduce((s, q) => s + q.marks, 0);
@@ -181,10 +262,12 @@ export default function AssignmentCreator() {
         description,
         due_date: dueDate || null,
         subject_id: subjectId === "none" ? null : subjectId,
+        // ── KEY FIX: send classroom_id so assignment is visible in portals ──
+        classroom_id: classroomId === "none" ? null : classroomId,
         total_marks: totalMarks || null,
         generation_method: generationMethod,
         learning_outcome_ids: selectedLOs,
-        // status field omitted — backend determines visibility; "published" = send now
+        status, // "draft" = hidden from students, "published" = visible in student portal
         questions: questions.map((q) => ({
           question_text: q.question_text,
           marks: q.marks,
@@ -215,6 +298,7 @@ export default function AssignmentCreator() {
     },
     onSuccess: (status) => {
       queryClient.invalidateQueries({ queryKey: ["assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["assignments", classroomId] });
       resetForm();
       if (status === "published") {
         toast({ title: "✅ Assignment sent to classroom!", description: "Students can now see and submit this assignment." });
@@ -226,7 +310,8 @@ export default function AssignmentCreator() {
   });
 
   const resetForm = () => {
-    setTitle(""); setDescription(""); setDueDate(""); setSubjectId("none");
+    setTitle(""); setDescription(""); setDueDate("");
+    setSubjectId("none"); setClassroomId("none");
     setSelectedLOs([]); setQuestions([]); setGenerationMethod("manual");
     setSelectedCOs([]); setSyllabusText(""); setExpandedSolutions({});
     setShowPreview(false);
@@ -242,6 +327,7 @@ export default function AssignmentCreator() {
   const totalMarks = questions.reduce((s, q) => s + q.marks, 0);
   const canCreate = title.trim() && questions.length > 0 && !createMutation.isPending;
   const selectedSubject = subjects.find(s => s.id === subjectId);
+  const selectedClassroom = classrooms.find(c => c.id === classroomId);
 
   return (
     <DashboardLayout>
@@ -279,73 +365,97 @@ export default function AssignmentCreator() {
                       <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">None</SelectItem>
-                        {subjects.map((s) => <SelectItem key={s.id} value={s.id}>{s.code} — {s.name}</SelectItem>)}
+                        {subjectsWithOutcomes.map((s) => <SelectItem key={s.id} value={s.id}>{s.code} — {s.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
 
-                {/* ─── LO Selector — grouped by CO ─── */}
+                {/* ── NEW: Classroom selector (required for student visibility) ── */}
                 <div className="space-y-2">
-                  <Label className="flex items-center gap-1.5 text-sm font-semibold">
-                    <Lightbulb className="h-4 w-4 text-amber-500" /> Learning Outcomes
+                  <Label className="flex items-center gap-1.5">
+                    <Users className="h-3.5 w-3.5 text-primary" />
+                    Send to Classroom
+                    <span className="text-[10px] text-muted-foreground font-normal ml-1">(students will see this assignment)</span>
                   </Label>
-                  {learningOutcomes.length === 0 ? (
-                    <div className="text-xs text-muted-foreground italic py-2">No LOs defined yet. Add them on the Outcomes page first.</div>
-                  ) : (
-                    <div className="space-y-3 max-h-56 overflow-y-auto pr-1">
-                      {losByCO.map(({ co, los }) => (
-                        <div key={co.id}>
-                          <p className="text-[11px] font-semibold text-violet-700 dark:text-violet-400 uppercase tracking-wide mb-1.5 flex items-center gap-1">
-                            <BookMarked className="h-3 w-3" /> {co.code} — {co.description}
-                          </p>
-                          <div className="space-y-1 pl-2 border-l-2 border-violet-200 dark:border-violet-800">
-                            {los.map(lo => (
-                              <button
-                                key={lo.id}
-                                type="button"
-                                onClick={() => toggleLO(lo.id)}
-                                className={`w-full text-left rounded-lg px-2.5 py-2 text-xs transition-all border ${
-                                  selectedLOs.includes(lo.id)
-                                    ? "border-amber-400 bg-amber-50 dark:bg-amber-950/20 text-amber-800 dark:text-amber-300"
-                                    : "border-border hover:border-muted-foreground/40 text-muted-foreground hover:text-foreground"
-                                }`}
-                              >
-                                <span className="font-bold mr-1.5">{lo.code}</span>
-                                {lo.description}
-                                {selectedLOs.includes(lo.id) && (
-                                  <CheckCircle2 className="h-3 w-3 inline ml-1.5 text-amber-500" />
-                                )}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
+                  <Select value={classroomId} onValueChange={setClassroomId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select classroom..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No classroom (save privately)</SelectItem>
+                      {classrooms.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                          {c.student_count !== undefined && ` · ${c.student_count} students`}
+                        </SelectItem>
                       ))}
-                      {ungroupedLOs.length > 0 && (
-                        <div>
-                          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Unlinked LOs</p>
-                          <div className="space-y-1">
-                            {ungroupedLOs.map(lo => (
-                              <button
-                                key={lo.id}
-                                type="button"
-                                onClick={() => toggleLO(lo.id)}
-                                className={`w-full text-left rounded-lg px-2.5 py-2 text-xs border transition-all ${
-                                  selectedLOs.includes(lo.id)
-                                    ? "border-amber-400 bg-amber-50 dark:bg-amber-950/20 text-amber-800 dark:text-amber-300"
-                                    : "border-border hover:border-muted-foreground/40 text-muted-foreground hover:text-foreground"
-                                }`}
-                              >
-                                <span className="font-bold mr-1.5">{lo.code}</span>{lo.description}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
+                    </SelectContent>
+                  </Select>
+                  {classroomId !== "none" && selectedClassroom && (
+                    <p className="text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                      <CheckCircle2 className="h-3 w-3" />
+                      Will be visible to students in <strong>{selectedClassroom.name}</strong>
+                    </p>
+                  )}
+                  {classroomId === "none" && (
+                    <p className="text-[11px] text-muted-foreground">
+                      Select a classroom to make this assignment visible to students
+                    </p>
+                  )}
+                </div>
+
+                {subjectId !== "none" && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3 flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-semibold text-amber-800 flex items-center gap-1.5"><FileText className="h-3.5 w-3.5" /> Past Papers Reference Pool</Label>
+                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">{pastQuestions.length} questions available</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input ref={pastPaperFileRef} type="file" accept=".pdf" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) { setPastPaperUploading(true); uploadPastPaperMutation.mutate(f); } }} />
+                      <Button size="sm" variant="outline" className="h-7 text-xs bg-white" onClick={() => pastPaperFileRef.current?.click()} disabled={pastPaperUploading}>
+                        {pastPaperUploading ? <><Loader2 className="h-3 w-3 mr-1 animate-spin" />Uploading...</> : <><Upload className="h-3 w-3 mr-1" />Upload PDF</>}
+                      </Button>
+                      {pastQuestions.length > 0 && (
+                        <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive hover:text-destructive/90 hover:bg-destructive/10" onClick={() => clearPastPapersMutation.mutate()} disabled={clearPastPapersMutation.isPending}>
+                          <Trash2 className="h-3 w-3 mr-1" />Clear Pool
+                        </Button>
                       )}
                     </div>
+                    <p className="text-[10px] text-muted-foreground leading-tight">These questions will be blended into AI generation (~40%) to ensure realistic exams.</p>
+                  </div>
+                )}
+
+                {/* ─── CO Selector ─── */}
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1.5 text-sm font-semibold">
+                    <GraduationCap className="h-4 w-4 text-violet-500" /> Course Outcomes
+                  </Label>
+                  {filteredCOs.length === 0 ? (
+                    <div className="text-xs text-muted-foreground italic py-2">No COs defined yet. Extract them on the Outcomes page first.</div>
+                  ) : (
+                    <div className="flex flex-col gap-1.5 max-h-56 overflow-y-auto pr-1">
+                      {filteredCOs.map(co => (
+                        <button
+                          key={co.id}
+                          type="button"
+                          onClick={() => toggleCO(co.id)}
+                          className={`w-full text-left rounded-lg px-2.5 py-2 text-xs transition-all border ${selectedCOs.includes(co.id)
+                              ? "border-violet-400 bg-violet-50 dark:bg-violet-950/20 text-violet-800 dark:text-violet-300"
+                              : "border-border hover:border-muted-foreground/40 text-muted-foreground hover:text-foreground"
+                            }`}
+                        >
+                          <span className="font-bold mr-1.5">{co.code}</span>
+                          {co.description}
+                          {selectedCOs.includes(co.id) && (
+                            <CheckCircle2 className="h-3 w-3 inline ml-1.5 text-violet-500" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
                   )}
-                  {selectedLOs.length > 0 && (
-                    <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">{selectedLOs.length} LO{selectedLOs.length > 1 ? "s" : ""} selected</p>
+                  {selectedCOs.length > 0 && (
+                    <p className="text-xs text-violet-600 dark:text-violet-400 font-medium">{selectedCOs.length} CO{selectedCOs.length > 1 ? "s" : ""} selected</p>
                   )}
                 </div>
               </CardContent>
@@ -366,6 +476,12 @@ export default function AssignmentCreator() {
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">LOs linked</span>
                     <span className="font-bold text-primary">{selectedLOs.length}</span>
+                  </div>
+                )}
+                {classroomId !== "none" && selectedClassroom && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Classroom</span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400 text-xs">{selectedClassroom.name}</span>
                   </div>
                 )}
                 <Separator />
@@ -402,6 +518,11 @@ export default function AssignmentCreator() {
                 </div>
                 {!title.trim() && <p className="text-[11px] text-muted-foreground text-center">Add a title to enable submission</p>}
                 {questions.length === 0 && <p className="text-[11px] text-muted-foreground text-center">Generate or add questions first</p>}
+                {classroomId === "none" && canCreate && (
+                  <p className="text-[11px] text-amber-600 dark:text-amber-400 text-center flex items-center justify-center gap-1">
+                    <AlertCircle className="h-3 w-3" /> No classroom selected — students won't see this
+                  </p>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -432,9 +553,8 @@ export default function AssignmentCreator() {
                         <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
                           {courseOutcomes.map((co) => (
                             <button key={co.id} type="button" onClick={() => toggleCO(co.id)}
-                              className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-all ${
-                                selectedCOs.includes(co.id) ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-muted-foreground/50"
-                              }`}
+                              className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-all ${selectedCOs.includes(co.id) ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-muted-foreground/50"
+                                }`}
                             >
                               {co.code}
                               <span className="ml-1 opacity-60 max-w-[100px] truncate inline-block align-bottom text-[10px]">{co.description}</span>
@@ -466,17 +586,8 @@ export default function AssignmentCreator() {
                   {/* Syllabus-Based */}
                   <TabsContent value="syllabus" className="space-y-4">
                     <div className="space-y-2">
-                      <Label>Upload PDF / Image of Syllabus</Label>
-                      <div className="flex gap-2">
-                        <input ref={fileRef} type="file" accept=".pdf,image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileUpload(f); }} />
-                        <Button variant="outline" onClick={() => fileRef.current?.click()} disabled={extracting}>
-                          {extracting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Extracting...</> : <><Upload className="h-4 w-4 mr-2" />Upload File</>}
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
                       <Label>Syllabus Text</Label>
-                      <Textarea value={syllabusText} onChange={(e) => setSyllabusText(e.target.value)} rows={4} placeholder="Paste syllabus or upload file above..." />
+                      <Textarea value={syllabusText} onChange={(e) => setSyllabusText(e.target.value)} rows={4} placeholder="Paste syllabus text here..." />
                     </div>
                     <div className="grid gap-3 grid-cols-3">
                       <div className="space-y-1"><Label className="text-xs">Questions</Label><Input type="number" min={1} max={30} value={numQuestions} onChange={(e) => setNumQuestions(Number(e.target.value))} /></div>
@@ -526,6 +637,7 @@ export default function AssignmentCreator() {
                     {description && <p className="text-sm text-muted-foreground">{description}</p>}
                     <div className="flex flex-wrap gap-2 mt-2">
                       {selectedSubject && <Badge variant="outline">{selectedSubject.code} — {selectedSubject.name}</Badge>}
+                      {selectedClassroom && <Badge variant="outline" className="text-emerald-700 border-emerald-300 bg-emerald-50 dark:bg-emerald-950/20"><Users className="h-3 w-3 mr-1" />{selectedClassroom.name}</Badge>}
                       {dueDate && <Badge variant="outline">Due: {new Date(dueDate).toLocaleString()}</Badge>}
                       <Badge variant="secondary">{questions.length} Questions • {totalMarks} Marks</Badge>
                     </div>

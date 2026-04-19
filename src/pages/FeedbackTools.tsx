@@ -123,20 +123,20 @@ export default function FeedbackTools() {
                     </div>
                   </div>
 
-                  <p className="text-sm font-medium text-muted-foreground">Performance Metrics (0–100)</p>
+                  <p className="text-sm font-medium text-muted-foreground">Performance Metrics</p>
                   <div className="grid gap-3 sm:grid-cols-4">
                     {[
-                      { label: "Marks", val: perfMarks, set: setPerfMarks },
-                      { label: "Attendance", val: perfAttendance, set: setPerfAttendance },
-                      { label: "Internal Assessments", val: perfInternal, set: setPerfInternal },
-                      { label: "Lab Performance", val: perfLab, set: setPerfLab },
-                      { label: "Assignment Scores", val: perfAssignments, set: setPerfAssignments },
-                      { label: "Study Hours/day", val: perfStudyHours, set: setPerfStudyHours },
-                      { label: "Concept Mastery", val: perfMastery, set: setPerfMastery },
+                      { label: "Marks (0-100)", val: perfMarks, set: setPerfMarks, max: 100 },
+                      { label: "Attendance (0-100)", val: perfAttendance, set: setPerfAttendance, max: 100 },
+                      { label: "Internal Assessments (0-20)", val: perfInternal, set: setPerfInternal, max: 20 },
+                      { label: "Lab Performance (0-25)", val: perfLab, set: setPerfLab, max: 25 },
+                      { label: "Assignment Scores (0-10)", val: perfAssignments, set: setPerfAssignments, max: 10 },
+                      { label: "Study Hours/day", val: perfStudyHours, set: setPerfStudyHours, max: 24 },
+                      { label: "Concept Mastery (0-100)", val: perfMastery, set: setPerfMastery, max: 100 },
                     ].map((f) => (
                       <div key={f.label} className="space-y-1">
                         <Label className="text-xs">{f.label}</Label>
-                        <Input type="number" value={f.val} onChange={(e) => f.set(e.target.value)} min={0} max={100} />
+                        <Input type="number" value={f.val} onChange={(e) => f.set(e.target.value)} min={0} max={f.max} />
                       </div>
                     ))}
                   </div>

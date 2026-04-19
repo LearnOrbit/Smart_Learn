@@ -78,14 +78,17 @@ const DEFAULT_METRICS: MetricsForm = {
 // ── Helper ───────────────────────────────────────────────────────────
 
 function averageScore(p: PerformanceData): number {
+  // Use weighted academic components (Matching LES Engine weights)
+  const w = { marks: 0.25, attendance: 0.15, ia: 0.20, lab: 0.15, assign: 0.10, study: 0.05, mastery: 0.10 };
+  
   return Math.round(
-    (p.student_marks +
-      p.attendance +
-      p.internal_assessments +
-      p.lab_performance +
-      p.assignment_scores +
-      p.concept_mastery) /
-      6
+    (p.student_marks * w.marks) +
+    (p.attendance * w.attendance) +
+    ((p.internal_assessments / 20) * 100 * w.ia) +
+    ((p.lab_performance / 25) * 100 * w.lab) +
+    ((p.assignment_scores / 10) * 100 * w.assign) +
+    (Math.min((p.study_hours / 168) * 100, 100) * w.study) +
+    (p.concept_mastery * w.mastery)
   );
 }
 
@@ -400,14 +403,17 @@ export default function Analytics() {
                           <MetricPill
                             label="Internals"
                             value={perf.internal_assessments}
+                            max={20}
                           />
                           <MetricPill
                             label="Lab"
                             value={perf.lab_performance}
+                            max={25}
                           />
                           <MetricPill
                             label="Assignments"
                             value={perf.assignment_scores}
+                            max={10}
                           />
                           <MetricPill
                             label="Study hrs/wk"
@@ -462,21 +468,24 @@ export default function Analytics() {
                   onChange={(v) => setForm({ ...form, attendance: v })}
                 />
                 <Field
-                  label="Internal Assessments (0-100)"
+                  label="Internal Assessments (0-20)"
                   value={form.internal_assessments}
                   onChange={(v) =>
                     setForm({ ...form, internal_assessments: v })
                   }
+                  max={20}
                 />
                 <Field
-                  label="Lab Performance (0-100)"
+                  label="Lab Performance (0-25)"
                   value={form.lab_performance}
                   onChange={(v) => setForm({ ...form, lab_performance: v })}
+                  max={25}
                 />
                 <Field
-                  label="Assignment Scores (0-100)"
+                  label="Assignment Scores (0-10)"
                   value={form.assignment_scores}
                   onChange={(v) => setForm({ ...form, assignment_scores: v })}
+                  max={10}
                 />
                 <Field
                   label="Study Hours / Week"
@@ -556,14 +565,17 @@ export default function Analytics() {
               <MetricCard
                 label="Internals"
                 value={myPerformance.internal_assessments}
+                max={20}
               />
               <MetricCard
                 label="Lab"
                 value={myPerformance.lab_performance}
+                max={25}
               />
               <MetricCard
                 label="Assignments"
                 value={myPerformance.assignment_scores}
+                max={10}
               />
               <MetricCard
                 label="Study hrs/wk"

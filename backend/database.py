@@ -16,9 +16,9 @@ DATABASE_URL = os.getenv(
 # For SQLite, we need to add check_same_thread=False
 if DATABASE_URL.startswith("sqlite"):
     engine = create_engine(DATABASE_URL, connect_args={
-                           "check_same_thread": False}, echo=True)
+                           "check_same_thread": False}, echo=False)
 else:
-    engine = create_engine(DATABASE_URL, echo=True)
+    engine = create_engine(DATABASE_URL, echo=False)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
@@ -117,6 +117,8 @@ class Assignment(Base):
     title = Column(String, nullable=False)
     description = Column(Text, default="")
     subject_id = Column(String, ForeignKey("subjects.id"), nullable=True)
+    classroom_id = Column(String, nullable=True)   # links to localStorage classroom id
+    status = Column(String, default="draft")        # "draft" | "published"
     total_marks = Column(Integer, nullable=True)
     # manual | co_based | syllabus_based
     generation_method = Column(String, default="manual")
@@ -367,6 +369,22 @@ class Announcement(Base):
     # Relationships
     teacher = relationship("User", foreign_keys=[teacher_id], lazy="joined")
     subject = relationship("Subject", foreign_keys=[subject_id], lazy="joined")
+
+
+class PastPaperQuestion(Base):
+    """
+    Individual question extracted from a previous year exam paper.
+    Used as reference material when generating new assignment questions.
+    """
+    __tablename__ = "past_paper_questions"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    subject_id = Column(String, ForeignKey("subjects.id"), nullable=False, index=True)
+    question_text = Column(Text, nullable=False)
+    year = Column(String, nullable=True)          # e.g. "2022-23", "Nov 2023"
+    difficulty = Column(String, nullable=True)    # easy / medium / hard (auto-detected)
+    created_by = Column(String, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, server_default=func.now(), nullable=False)
 
 
 # Create all tables

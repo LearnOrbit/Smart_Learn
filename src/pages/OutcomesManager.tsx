@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/integrations/api/client";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -59,6 +59,7 @@ export default function OutcomesManager() {
   const [extractedLOs, setExtractedLOs] = useState<DraftLO[]>([]);
   const [previewReady, setPreviewReady] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [savedSubjectName, setSavedSubjectName] = useState("");
 
   // PO PDF
   const [poPdfFileName, setPoPdfFileName] = useState("");
@@ -83,7 +84,7 @@ export default function OutcomesManager() {
   const createLO = useMutation({ mutationFn: async () => { const { error } = await apiClient.post("/learning-outcomes", { code: loCode, description: loDesc, course_outcome_id: loCoId }); if (error) throw error; }, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["learning_outcomes"] }); setLoOpen(false); setLoCode(""); setLoDesc(""); setLoCoId(""); toast({ title: "LO created!" }); }, onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }) });
   const deleteLO = useMutation({ mutationFn: async (id: string) => { const { error } = await apiClient.delete(`/learning-outcomes/${id}`); if (error) throw error; }, onSuccess: () => queryClient.invalidateQueries({ queryKey: ["learning_outcomes"] }) });
 
-  /* ════ STEP 1: Upload PDF — extract raw text only ════ */
+  /* ════ STEP 1: Upload PDF ════ */
   const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -112,7 +113,7 @@ export default function OutcomesManager() {
     }
   };
 
-  /* ════ STEP 2: Teacher types subject name → find section + extract ════ */
+  /* ════ STEP 2: Extract COs & LOs ════ */
   const handleExtract = () => {
     if (!searchSubjectName.trim()) {
       toast({ title: "Enter a subject name first", variant: "destructive" }); return;
@@ -126,111 +127,269 @@ export default function OutcomesManager() {
     setExtractedLOs([]);
 
     try {
-      const lines = rawText.split(/\n/).map(l => l.trim()).filter(l => l.length > 1);
-
-      // Find the line index where the subject name appears (case-insensitive partial match)
       const keyword = searchSubjectName.trim().toLowerCase();
-      let startIdx = lines.findIndex(l => l.toLowerCase().includes(keyword));
+      const lower = rawText.toLowerCase();
 
-      if (startIdx === -1) {
-        toast({ title: "Subject not found", description: `"${searchSubjectName}" was not found in the PDF. Try a shorter or different name.`, variant: "destructive" });
-        setSearching(false); return;
+      if (!lower.includes(keyword)) {
+        toast({
+          title: "Subject not found",
+          description: `"${searchSubjectName}" not found in PDF. Try a shorter name.`,
+          variant: "destructive"
+        });
+        return;
       }
 
-      // Scan forward from startIdx to collect CO and LO lines
-      // Stop at a new "subject-like" heading or end of document
-      const cos: DraftCO[] = [];
-      const los: DraftLO[] = [];
-      let lastCOCode = "";
-      let coCounter = 1;
-      let loCounter = 1;
-      let inCOSection = false;
-      let inLOSection = false;
-
-      for (let i = startIdx + 1; i < Math.min(startIdx + 150, lines.length); i++) {
-        const line = lines[i];
-
-        // Stop if we hit another subject heading (same pattern) far from the start
-        if (i > startIdx + 5) {
-          const isNewSubject = line.toLowerCase().includes("subject") || /^[A-Z]{2,6}\d{2,4}\s*[-:–]/.test(line);
-          if (isNewSubject && !line.toLowerCase().includes(keyword)) break;
+      // ── Find a text block after a heading marker ──
+      // Uses plain indexOf (no regex) — stateless and reliable.
+      // keyword must appear anywhere before the heading in the document.
+      const sliceBlock = (
+        headingMarker: string,
+        stopMarkers: string[]
+      ): string => {
+        let pos = 0;
+        while (pos < lower.length) {
+          const found = lower.indexOf(headingMarker, pos);
+          if (found === -1) return "";
+          if (lower.slice(0, found).includes(keyword)) {
+            const afterHeading = found + headingMarker.length;
+            const rest = lower.slice(afterHeading);
+            let stopIdx = rest.length;
+            for (const stop of stopMarkers) {
+              const si = rest.indexOf(stop);
+              if (si !== -1 && si < stopIdx) stopIdx = si;
+            }
+            return rawText.slice(afterHeading, afterHeading + stopIdx);
+          }
+          pos = found + 1;
         }
+        return "";
+      };
 
-        // Section headings
-        if (/^(course\s*outcomes?|COs?)\s*[:\-–]?\s*$/i.test(line)) { inCOSection = true; inLOSection = false; continue; }
-        if (/^(learning\s*outcomes?|LOs?)\s*[:\-–]?\s*$/i.test(line)) { inLOSection = true; inCOSection = false; continue; }
+      // ── Find LO block with smart subject↔lab matching ──
+      const sliceLabBlock = (stopMarkers: string[]): string => {
+        const headingMarker = "lab outcomes:";
 
-        // Explicit CO patterns: "CO1:", "CO1 -", "Course Outcome 1:"
-        const coEx = line.match(/^CO\s*(\d+)\s*[:\-–.)\s]+(.{5,})/i) ||
-                     line.match(/^Course\s*Outcome\s*(\d+)\s*[:\-–.)\s]+(.{5,})/i);
-        if (coEx) {
-          const co = { code: `CO${coEx[1]}`, description: coEx[2].trim() };
-          cos.push(co); lastCOCode = co.code; inCOSection = true; continue;
-        }
+        // Strategy 1: If keyword looks like a course code (e.g. "csc601"),
+        // derive the lab code (csl601) and find the lab section that has it nearby
+        const courseCodeMatch = keyword.match(/^([a-z]+)(\d+)$/i);
+        if (courseCodeMatch) {
+          const prefix = courseCodeMatch[1].toLowerCase();
+          const num = courseCodeMatch[2];
+          // Map theory code prefix to lab prefix: csc->csl, cs->csl, etc.
+          const labCode = `csl${num}`;
 
-        // Explicit LO patterns
-        const loEx = line.match(/^LO\s*(\d+)\s*[:\-–.)\s]+(.{5,})/i) ||
-                     line.match(/^Learning\s*Outcome\s*(\d+)\s*[:\-–.)\s]+(.{5,})/i);
-        if (loEx) {
-          los.push({ code: `LO${loEx[1]}`, description: loEx[2].trim(), co_code: lastCOCode || "CO1" });
-          inLOSection = true; continue;
-        }
-
-        // Numbered items inside CO section
-        if (inCOSection && !inLOSection) {
-          const num = line.match(/^(\d+)\s*[:\-–.)\s]+(.{10,})/) || line.match(/^[•●▪◦*]\s*(.{10,})/);
-          if (num) {
-            const desc = (num[2] || num[1]).trim();
-            const co = { code: `CO${coCounter++}`, description: desc };
-            cos.push(co); lastCOCode = co.code; continue;
+          let pos = 0;
+          while (pos < lower.length) {
+            const found = lower.indexOf(headingMarker, pos);
+            if (found === -1) break;
+            // Check if lab code appears within 500 chars before this heading
+            const near = lower.slice(Math.max(0, found - 500), found);
+            if (near.includes(labCode)) {
+              const afterHeading = found + headingMarker.length;
+              const rest = lower.slice(afterHeading);
+              let stopIdx = rest.length;
+              for (const stop of stopMarkers) {
+                const si = rest.indexOf(stop);
+                if (si !== -1 && si < stopIdx) stopIdx = si;
+              }
+              return rawText.slice(afterHeading, afterHeading + stopIdx);
+            }
+            pos = found + 1;
           }
         }
 
-        // Numbered items inside LO section
-        if (inLOSection) {
-          const num = line.match(/^(\d+)\s*[:\-–.)\s]+(.{10,})/) || line.match(/^[•●▪◦*]\s*(.{10,})/);
-          if (num) {
-            const desc = (num[2] || num[1]).trim();
-            los.push({ code: `LO${loCounter++}`, description: desc, co_code: lastCOCode || (cos[cos.length - 1]?.code ?? "CO1") });
+        // Strategy 2: keyword is a subject name (e.g. "system programming")
+        // Find the lab section where a significant part of the keyword
+        // appears within 500 chars before "Lab Outcomes:"
+        // Use first 3+ words of keyword for matching
+        const keywordWords = keyword.split(/\s+/).filter(w => w.length > 3);
+        const shortKey = keywordWords.slice(0, 2).join(" "); // e.g. "system programming"
+
+        let pos = 0;
+        while (pos < lower.length) {
+          const found = lower.indexOf(headingMarker, pos);
+          if (found === -1) break;
+          const near = lower.slice(Math.max(0, found - 500), found);
+          if (near.includes(shortKey)) {
+            const afterHeading = found + headingMarker.length;
+            const rest = lower.slice(afterHeading);
+            let stopIdx = rest.length;
+            for (const stop of stopMarkers) {
+              const si = rest.indexOf(stop);
+              if (si !== -1 && si < stopIdx) stopIdx = si;
+            }
+            return rawText.slice(afterHeading, afterHeading + stopIdx);
+          }
+          pos = found + 1;
+        }
+
+        return "";
+      };
+
+      // ── Parse numbered outcome items from a text block ──
+      // Handles two PDF formats:
+      //   Format A: "1 Identify the relevance..."  (number + text on same line)
+      //   Format B: "1\nIdentify the relevance..."  (number alone, text on next line)
+      // Also merges wrapped continuation lines.
+      const parseNumbered = (block: string, prefix: string): { code: string; description: string }[] => {
+        const results: { code: string; description: string }[] = [];
+        if (!block.trim()) return results;
+
+        const lines = block
+          .split("\n")
+          .map(l => l.trim())
+          .filter(l => l.length > 0);
+
+        const merged: string[] = [];
+
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+
+          // ── Stop conditions — signals we've left the outcomes section ──
+          // Single keyword on its own line (PDF splits "Module Content Hrs" across lines)
+          if (/^(module|textbook|reference|assessment|suggested|term)$/i.test(line)) break;
+          // Sub-item like "1.1 Concept of..."
+          if (/^\d+\.\d+/.test(line)) break;
+          // Module row: short line ending with a standalone hour number e.g. "Introduction to System Software 2"
+          if (/^\d+\s+.+\s+\d+$/.test(line) && line.split(" ").length <= 6) break;
+
+          // ── Format A: number + text on same line — "1 Identify..." ──
+          if (/^\d+\s+\S/.test(line) && !/^\d+\.\d+/.test(line)) {
+            merged.push(line);
+            continue;
+          }
+
+          // ── Format B: bare number alone — peek at next line for text ──
+          if (/^\d+$/.test(line) && i + 1 < lines.length) {
+            const next = lines[i + 1];
+            const nextIsClean =
+              !/^\d+$/.test(next) &&
+              !/^\d+\.\d+/.test(next) &&
+              !/^(module|textbook|reference|assessment|suggested|term)$/i.test(next);
+            if (nextIsClean) {
+              merged.push(`${line} ${next}`);
+              i++; // consumed next line
+              continue;
+            }
+          }
+
+          // ── Continuation: append to last item ──
+          if (
+            merged.length > 0 &&
+            !/^\d+$/.test(line) &&
+            !/^\d+\.\d+/.test(line) &&
+            !/^(module|textbook|reference|assessment|suggested|term)$/i.test(line)
+          ) {
+            merged[merged.length - 1] += " " + line;
           }
         }
-      }
 
-      setExtractedCOs(cos);
-      setExtractedLOs(los);
+        let counter = 1;
+        for (const line of merged) {
+          const m = line.match(/^\d+\s+(.+)/);
+          if (!m) continue;
+          const desc = m[1].replace(/\s+/g, " ").trim();
+
+          // Skip course objectives — "To understand...", "To explore..." etc.
+          if (/^to\s+/i.test(desc)) continue;
+          // Skip module rows that slipped through — end with bare number, short line
+          if (/\b\d+$/.test(desc) && desc.split(" ").length <= 6) continue;
+          // Skip anything too short to be a real outcome
+          if (desc.length < 10) continue;
+
+          results.push({ code: `${prefix}${counter++}`, description: desc });
+        }
+
+        return results;
+      };
+
+      // ── Extract CO block ──
+      // Heading: "course outcomes:" (present in all subjects in this PDF)
+      // Stop: "module" alone on a line, or "module content", or textbooks section
+      const coBlock = sliceBlock(
+        "course outcomes:",
+        [
+          "module content",
+          "module  content",
+          "\nmodule\n",
+          "textbooks",
+          "text books",
+          "references:",
+          "course objectives",
+        ]
+      );
+
+      // ── Extract LO block ──
+      const loBlock = sliceLabBlock(
+        [
+          "suggested list",
+          "term work",
+          "textbooks",
+          "reference books",
+          "oral",
+        ]
+      );
+
+      // ── Parse both blocks ──
+      const cos = parseNumbered(coBlock, "CO");
+      const los = parseNumbered(loBlock, "LO").map(lo => ({
+        ...lo,
+        co_code: cos[0]?.code ?? "CO1",
+      }));
+
+      // ── Deduplicate by description ──
+      const uniq = <T extends { description: string }>(arr: T[]) =>
+        arr.filter((x, i, a) =>
+          a.findIndex(y => y.description.toLowerCase() === x.description.toLowerCase()) === i
+        );
+
+      const uniqueCOs = uniq(cos);
+      const uniqueLOs = uniq(los);
+
+      setExtractedCOs(uniqueCOs);
+      setExtractedLOs(uniqueLOs);
       setPreviewReady(true);
 
-      if (cos.length === 0) {
+      if (uniqueCOs.length === 0 && uniqueLOs.length === 0) {
         toast({
-          title: "Subject found, but no COs detected",
-          description: "The section was found but CO/LO patterns weren't recognized. Check if the PDF uses standard formatting.",
+          title: "Nothing detected",
+          description: "Try a shorter subject name, e.g. 'System Programming'.",
           variant: "destructive"
         });
       } else {
-        toast({ title: "Extraction complete!", description: `Found ${cos.length} COs and ${los.length} LOs for "${searchSubjectName}".` });
+        toast({
+          title: "Extraction complete!",
+          description: `Found ${uniqueCOs.length} COs and ${uniqueLOs.length} LOs for "${searchSubjectName}".`
+        });
       }
     } finally {
       setSearching(false);
     }
   };
 
-  /* ════ STEP 3: Save extracted data permanently ════ */
+  /* ════ STEP 3: Save permanently ════ */
   const handleSave = async () => {
     if (extractedCOs.length === 0) {
       toast({ title: "Nothing to save", variant: "destructive" }); return;
     }
     setSaving(true);
     try {
-      // Create/upsert subject
-      const subjectCode = searchSubjectName.trim().toUpperCase().replace(/\s+/g, "").slice(0, 8);
-      await apiClient.post("/subjects", { code: subjectCode, name: searchSubjectName.trim() });
+      // Delete any previously existing subjects to enforce a single-subject workspace
+      for (const s of subjects) {
+        await apiClient.delete(`/subjects/${s.id}`);
+      }
 
-      // Save each CO and its LOs
+      const subjectCode = searchSubjectName.trim().toUpperCase().replace(/\s+/g, "").slice(0, 8);
+      // Capture the new subject's id so COs and LOs are linked to it
+      const { data: subjectData } = await apiClient.post("/subjects", { code: subjectCode, name: searchSubjectName.trim() });
+      const newSubjectId = subjectData?.id ?? null;
+
       for (const co of extractedCOs) {
         if (!co.description.trim()) continue;
         const { data: coData } = await apiClient.post("/course-outcomes", {
           code: co.code,
           description: co.description,
+          subject_id: newSubjectId,
           program_outcome_id: null,
         });
         if (coData?.id) {
@@ -241,17 +400,21 @@ export default function OutcomesManager() {
               code: lo.code,
               description: lo.description,
               course_outcome_id: coData.id,
+              subject_id: newSubjectId,
             });
           }
         }
       }
 
-      toast({ title: "Saved to database!", description: `${extractedCOs.length} COs and ${extractedLOs.length} LOs for "${searchSubjectName}" are now permanently saved.` });
+      toast({
+        title: "Saved!",
+        description: `${extractedCOs.length} COs and ${extractedLOs.length} LOs for "${searchSubjectName}" saved permanently.`
+      });
       queryClient.invalidateQueries({ queryKey: ["subjects"] });
       queryClient.invalidateQueries({ queryKey: ["course_outcomes"] });
       queryClient.invalidateQueries({ queryKey: ["learning_outcomes"] });
 
-      // Clear preview but keep PDF loaded for next subject extraction
+      setSavedSubjectName(searchSubjectName.trim());
       setPreviewReady(false);
       setExtractedCOs([]);
       setExtractedLOs([]);
@@ -267,7 +430,9 @@ export default function OutcomesManager() {
   const handlePoPdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setPoPdfFileName(file.name); setPoExtracting(true); setExtractedPOs([]);
+    setPoPdfFileName(file.name);
+    setPoExtracting(true);
+    setExtractedPOs([]);
     try {
       const formData = new FormData();
       formData.append("file", file);
@@ -277,8 +442,9 @@ export default function OutcomesManager() {
       const lines = text.split(/\n/).map(l => l.trim()).filter(Boolean);
       const parsed: Array<{ code: string; description: string }> = [];
       for (const line of lines) {
-        const m = line.match(/^PO\s*(\d+)\s*[:\-–.)\s]+(.{5,})/i) ||
-                  line.match(/^Program\s*Outcome\s*(\d+)\s*[:\-–.)\s]+(.{5,})/i);
+        const m =
+          line.match(/^PO\s*(\d+)\s*[:\-–.)\s]+(.{5,})/i) ||
+          line.match(/^Program\s*Outcome\s*(\d+)\s*[:\-–.)\s]+(.{5,})/i);
         if (m) parsed.push({ code: `PO${m[1]}`, description: m[2].trim() });
       }
       if (parsed.length === 0) throw new Error("No POs found. Expected lines like 'PO1: Description'.");
@@ -286,19 +452,27 @@ export default function OutcomesManager() {
       toast({ title: `Found ${parsed.length} POs`, description: "Review and save." });
     } catch (err: any) {
       toast({ title: "Extraction failed", description: err.message, variant: "destructive" });
-    } finally { setPoExtracting(false); e.target.value = ""; }
+    } finally {
+      setPoExtracting(false);
+      e.target.value = "";
+    }
   };
 
   const handlePoImport = async () => {
     setPoImporting(true);
     try {
-      for (const po of extractedPOs) await apiClient.post("/program-outcomes", { code: po.code, description: po.description });
+      for (const po of extractedPOs) {
+        await apiClient.post("/program-outcomes", { code: po.code, description: po.description });
+      }
       toast({ title: "POs saved!", description: `${extractedPOs.length} Program Outcomes saved permanently.` });
       queryClient.invalidateQueries({ queryKey: ["program_outcomes"] });
-      setExtractedPOs([]); setPoPdfFileName("");
+      setExtractedPOs([]);
+      setPoPdfFileName("");
     } catch (err: any) {
       toast({ title: "Save failed", description: err.message, variant: "destructive" });
-    } finally { setPoImporting(false); }
+    } finally {
+      setPoImporting(false);
+    }
   };
 
   /* ════════════════════ RENDER ════════════════════ */
@@ -306,14 +480,22 @@ export default function OutcomesManager() {
     <DashboardLayout>
       <div className="space-y-6">
         <div>
-          <h2 className="text-2xl font-bold" style={{ fontFamily: "var(--font-display)" }}>Outcomes Management</h2>
-          <p className="text-muted-foreground text-sm mt-1">Upload a syllabus PDF, enter the subject name, and auto-extract COs & LOs.</p>
+          <h2 className="text-2xl font-bold" style={{ fontFamily: "var(--font-display)" }}>
+            Outcomes Management
+          </h2>
+          <p className="text-muted-foreground text-sm mt-1">
+            Upload a syllabus PDF, enter the subject name, and auto-extract COs &amp; LOs.
+          </p>
         </div>
 
         <Tabs defaultValue="co-lo">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="co-lo" className="gap-2"><ListTree className="h-4 w-4" />CO &amp; LO</TabsTrigger>
-            <TabsTrigger value="po" className="gap-2"><Target className="h-4 w-4" />POs (Global)</TabsTrigger>
+            <TabsTrigger value="co-lo" className="gap-2">
+              <ListTree className="h-4 w-4" />CO &amp; LO
+            </TabsTrigger>
+            <TabsTrigger value="po" className="gap-2">
+              <Target className="h-4 w-4" />POs (Global)
+            </TabsTrigger>
           </TabsList>
 
           {/* ══ TAB 1: CO & LO ══ */}
@@ -326,27 +508,37 @@ export default function OutcomesManager() {
                   <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-violet-600 text-white text-xs font-bold">1</span>
                   Upload Syllabus PDF
                 </CardTitle>
-                <CardDescription className="text-xs">Upload once — then extract outcomes for multiple subjects.</CardDescription>
+                <CardDescription className="text-xs">
+                  Upload once — then extract outcomes for multiple subjects.
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div
                   onClick={() => !uploadLoading && document.getElementById("syllabus-upload")?.click()}
                   className={`flex items-center justify-center gap-3 h-20 border-2 border-dashed rounded-xl cursor-pointer transition-all
-                    ${uploadLoading ? "border-violet-400 bg-violet-50 dark:bg-violet-950/20"
-                    : pdfLoaded ? "border-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/10"
-                    : "border-muted-foreground/25 hover:border-violet-400 hover:bg-violet-50/30"}`}
+                    ${uploadLoading
+                      ? "border-violet-400 bg-violet-50 dark:bg-violet-950/20"
+                      : pdfLoaded
+                        ? "border-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/10"
+                        : "border-muted-foreground/25 hover:border-violet-400 hover:bg-violet-50/30"
+                    }`}
                 >
                   {uploadLoading ? (
-                    <><Loader2 className="h-5 w-5 animate-spin text-violet-600" /><span className="text-sm text-violet-600 font-medium">Reading PDF…</span></>
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin text-violet-600" />
+                      <span className="text-sm text-violet-600 font-medium">Reading PDF…</span>
+                    </>
                   ) : pdfLoaded ? (
-                    <><CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                    <>
+                      <CheckCircle2 className="h-5 w-5 text-emerald-600" />
                       <div>
                         <p className="text-sm font-semibold text-emerald-700">{pdfFileName}</p>
                         <p className="text-xs text-emerald-600/70">PDF loaded — click to replace</p>
                       </div>
                     </>
                   ) : (
-                    <><Upload className="h-6 w-6 text-muted-foreground" />
+                    <>
+                      <Upload className="h-6 w-6 text-muted-foreground" />
                       <div>
                         <p className="text-sm font-medium">Click to upload PDF</p>
                         <p className="text-xs text-muted-foreground">Any syllabus or course document</p>
@@ -365,20 +557,28 @@ export default function OutcomesManager() {
                   <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-violet-600 text-white text-xs font-bold">2</span>
                   Enter Subject Name to Extract
                 </CardTitle>
-                <CardDescription className="text-xs">Type the subject name exactly as it appears in the PDF. The system will find it and extract COs &amp; LOs from that section.</CardDescription>
+                <CardDescription className="text-xs">
+                  Type the subject name as it appears in the PDF. The system will find and extract COs &amp; LOs automatically.
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex gap-2">
                   <Input
-                    placeholder="e.g. Data Structures, Operating Systems…"
+                    placeholder="e.g. System Programming, Cryptography…"
                     value={searchSubjectName}
                     onChange={e => { setSearchSubjectName(e.target.value); setPreviewReady(false); }}
                     onKeyDown={e => e.key === "Enter" && handleExtract()}
                     className="flex-1"
                   />
-                  <Button onClick={handleExtract} disabled={searching || !searchSubjectName.trim()} className="gap-2 shrink-0">
-                    {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                    {searching ? "Searching…" : "Extract"}
+                  <Button
+                    onClick={handleExtract}
+                    disabled={searching || !searchSubjectName.trim()}
+                    className="gap-2 shrink-0"
+                  >
+                    {searching
+                      ? <><Loader2 className="h-4 w-4 animate-spin" />Searching…</>
+                      : <><Search className="h-4 w-4" />Extract</>
+                    }
                   </Button>
                 </div>
               </CardContent>
@@ -398,13 +598,15 @@ export default function OutcomesManager() {
                       <Badge variant="secondary">{extractedLOs.length} LOs</Badge>
                     </div>
                   </div>
-                  <CardDescription className="text-xs">These will be permanently saved. Only you can delete them later.</CardDescription>
+                  <CardDescription className="text-xs">
+                    Review below. These will be permanently saved — only you can delete them later.
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {extractedCOs.length === 0 ? (
                     <div className="text-center py-6 text-muted-foreground text-sm">
                       <FileText className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                      No COs detected in this section. The PDF may use non-standard formatting.
+                      No COs detected. The PDF may use non-standard formatting.
                     </div>
                   ) : (
                     <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
@@ -421,7 +623,9 @@ export default function OutcomesManager() {
                                 {coLOs.map((lo, j) => (
                                   <div key={j} className="px-3 py-1.5 flex items-start gap-2 bg-background">
                                     <Lightbulb className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />
-                                    <span className="text-xs"><strong className="text-muted-foreground">{lo.code}</strong> — {lo.description}</span>
+                                    <span className="text-xs">
+                                      <strong className="text-muted-foreground">{lo.code}</strong> — {lo.description}
+                                    </span>
                                   </div>
                                 ))}
                               </div>
@@ -429,6 +633,17 @@ export default function OutcomesManager() {
                           </div>
                         );
                       })}
+                      {/* Show LOs that aren't linked to any CO (edge case) */}
+                      {extractedCOs.length > 0 && extractedLOs.filter(lo => !extractedCOs.find(co => co.code === lo.co_code)).map((lo, j) => (
+                        <div key={`orphan-${j}`} className="rounded-lg border border-amber-200 dark:border-amber-900/50 overflow-hidden">
+                          <div className="px-3 py-1.5 flex items-start gap-2 bg-amber-50 dark:bg-amber-950/20">
+                            <Lightbulb className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />
+                            <span className="text-xs">
+                              <strong className="text-muted-foreground">{lo.code}</strong> — {lo.description}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
 
@@ -454,21 +669,24 @@ export default function OutcomesManager() {
                   <p className="text-xs text-muted-foreground">Permanently stored — delete only when needed</p>
                 </div>
                 <div className="flex flex-wrap gap-2 items-center">
-                  <Select value={listSubjectId} onValueChange={setListSubjectId}>
-                    <SelectTrigger className="h-8 text-xs w-40">
-                      <SelectValue placeholder="Filter by subject" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All subjects</SelectItem>
-                      {subjects.map(s => <SelectItem key={s.id} value={s.code}>{s.code} — {s.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  {savedSubjectName && (
+                    <div className="h-8 px-3 py-1 bg-violet-100 dark:bg-violet-900/40 text-violet-800 dark:text-violet-300 rounded-md text-xs font-semibold flex items-center border border-violet-200 dark:border-violet-800">
+                      Active: {savedSubjectName}
+                    </div>
+                  )}
+
+                  {/* Add CO manually */}
                   <Dialog open={coOpen} onOpenChange={setCoOpen}>
-                    <DialogTrigger asChild><Button variant="outline" size="sm"><Plus className="h-4 w-4 mr-1" />Add CO</Button></DialogTrigger>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="sm"><Plus className="h-4 w-4 mr-1" />Add CO</Button>
+                    </DialogTrigger>
                     <DialogContent>
                       <DialogHeader><DialogTitle>New Course Outcome</DialogTitle></DialogHeader>
                       <form onSubmit={e => { e.preventDefault(); createCO.mutate(); }} className="space-y-4">
-                        <div className="space-y-2"><Label>Code</Label><Input value={coCode} onChange={e => setCoCode(e.target.value)} required placeholder="CO1" /></div>
+                        <div className="space-y-2">
+                          <Label>Code</Label>
+                          <Input value={coCode} onChange={e => setCoCode(e.target.value)} required placeholder="CO1" />
+                        </div>
                         <div className="space-y-2">
                           <Label>Linked PO (optional)</Label>
                           <Select value={coPoId} onValueChange={setCoPoId}>
@@ -479,25 +697,42 @@ export default function OutcomesManager() {
                             </SelectContent>
                           </Select>
                         </div>
-                        <div className="space-y-2"><Label>Description</Label><Textarea value={coDesc} onChange={e => setCoDesc(e.target.value)} rows={3} /></div>
+                        <div className="space-y-2">
+                          <Label>Description</Label>
+                          <Textarea value={coDesc} onChange={e => setCoDesc(e.target.value)} rows={3} />
+                        </div>
                         <Button type="submit" className="w-full" disabled={createCO.isPending}>Create CO</Button>
                       </form>
                     </DialogContent>
                   </Dialog>
+
+                  {/* Add LO manually */}
                   <Dialog open={loOpen} onOpenChange={setLoOpen}>
-                    <DialogTrigger asChild><Button variant="outline" size="sm"><Plus className="h-4 w-4 mr-1" />Add LO</Button></DialogTrigger>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="sm"><Plus className="h-4 w-4 mr-1" />Add LO</Button>
+                    </DialogTrigger>
                     <DialogContent>
                       <DialogHeader><DialogTitle>New Learning Outcome</DialogTitle></DialogHeader>
                       <form onSubmit={e => { e.preventDefault(); createLO.mutate(); }} className="space-y-4">
-                        <div className="space-y-2"><Label>Code</Label><Input value={loCode} onChange={e => setLoCode(e.target.value)} required placeholder="LO1" /></div>
+                        <div className="space-y-2">
+                          <Label>Code</Label>
+                          <Input value={loCode} onChange={e => setLoCode(e.target.value)} required placeholder="LO1" />
+                        </div>
                         <div className="space-y-2">
                           <Label>Linked CO</Label>
                           <Select value={loCoId} onValueChange={setLoCoId}>
                             <SelectTrigger><SelectValue placeholder="Select CO" /></SelectTrigger>
-                            <SelectContent>{listCOs.map((co: any) => <SelectItem key={co.id} value={co.id}>{co.code}</SelectItem>)}</SelectContent>
+                            <SelectContent>
+                              {listCOs.map((co: any) => (
+                                <SelectItem key={co.id} value={co.id}>{co.code}</SelectItem>
+                              ))}
+                            </SelectContent>
                           </Select>
                         </div>
-                        <div className="space-y-2"><Label>Description</Label><Textarea value={loDesc} onChange={e => setLoDesc(e.target.value)} rows={3} /></div>
+                        <div className="space-y-2">
+                          <Label>Description</Label>
+                          <Textarea value={loDesc} onChange={e => setLoDesc(e.target.value)} rows={3} />
+                        </div>
                         <Button type="submit" className="w-full" disabled={createLO.isPending || !loCoId}>Create LO</Button>
                       </form>
                     </DialogContent>
@@ -522,32 +757,43 @@ export default function OutcomesManager() {
                           <div>
                             <div className="flex items-center gap-2">
                               <p className="font-bold text-violet-800 dark:text-violet-300 text-sm">{co.code}</p>
-                              {linkedPO && <Badge variant="outline" className="text-[10px] border-violet-300 text-violet-700">→ {linkedPO.code}</Badge>}
+                              {linkedPO && (
+                                <Badge variant="outline" className="text-[10px] border-violet-300 text-violet-700">
+                                  → {linkedPO.code}
+                                </Badge>
+                              )}
                             </div>
                             <p className="text-sm mt-0.5">{co.description}</p>
                           </div>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-destructive opacity-40 hover:opacity-100" onClick={() => deleteCO.mutate(co.id)}>
+                          <Button
+                            variant="ghost" size="icon"
+                            className="h-7 w-7 shrink-0 text-destructive opacity-40 hover:opacity-100"
+                            onClick={() => deleteCO.mutate(co.id)}
+                          >
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
                         <div className="bg-background divide-y">
-                          {childLOs.length === 0
-                            ? <p className="px-4 py-2 text-xs text-muted-foreground italic">No LOs linked.</p>
-                            : childLOs.map(lo => (
-                              <div key={lo.id} className="flex justify-between items-start px-4 py-2 group hover:bg-muted/20">
-                                <div className="flex items-start gap-2">
-                                  <Lightbulb className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />
-                                  <div>
-                                    <span className="text-[11px] font-bold text-muted-foreground">{lo.code}</span>
-                                    <span className="text-xs ml-1.5">{lo.description}</span>
-                                  </div>
+                          {childLOs.length === 0 ? (
+                            <p className="px-4 py-2 text-xs text-muted-foreground italic">No LOs linked.</p>
+                          ) : childLOs.map(lo => (
+                            <div key={lo.id} className="flex justify-between items-start px-4 py-2 group hover:bg-muted/20">
+                              <div className="flex items-start gap-2">
+                                <Lightbulb className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />
+                                <div>
+                                  <span className="text-[11px] font-bold text-muted-foreground">{lo.code}</span>
+                                  <span className="text-xs ml-1.5">{lo.description}</span>
                                 </div>
-                                <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 text-destructive opacity-0 group-hover:opacity-100" onClick={() => deleteLO.mutate(lo.id)}>
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
                               </div>
-                            ))
-                          }
+                              <Button
+                                variant="ghost" size="icon"
+                                className="h-6 w-6 shrink-0 text-destructive opacity-0 group-hover:opacity-100"
+                                onClick={() => deleteLO.mutate(lo.id)}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ))}
                         </div>
                       </Card>
                     );
@@ -565,12 +811,20 @@ export default function OutcomesManager() {
                 <p className="text-xs text-muted-foreground">Institution-wide — same across all subjects.</p>
               </div>
               <Dialog open={poOpen} onOpenChange={setPoOpen}>
-                <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4 mr-1" />Add PO</Button></DialogTrigger>
+                <DialogTrigger asChild>
+                  <Button size="sm"><Plus className="h-4 w-4 mr-1" />Add PO</Button>
+                </DialogTrigger>
                 <DialogContent>
                   <DialogHeader><DialogTitle>New Program Outcome</DialogTitle></DialogHeader>
                   <form onSubmit={e => { e.preventDefault(); createPO.mutate(); }} className="space-y-4">
-                    <div className="space-y-2"><Label>Code (e.g. PO1)</Label><Input value={poCode} onChange={e => setPoCode(e.target.value)} required placeholder="PO1" /></div>
-                    <div className="space-y-2"><Label>Description</Label><Textarea value={poDesc} onChange={e => setPoDesc(e.target.value)} rows={3} /></div>
+                    <div className="space-y-2">
+                      <Label>Code (e.g. PO1)</Label>
+                      <Input value={poCode} onChange={e => setPoCode(e.target.value)} required placeholder="PO1" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Description</Label>
+                      <Textarea value={poDesc} onChange={e => setPoDesc(e.target.value)} rows={3} />
+                    </div>
                     <Button type="submit" className="w-full" disabled={createPO.isPending}>Create</Button>
                   </form>
                 </DialogContent>
@@ -579,51 +833,83 @@ export default function OutcomesManager() {
 
             <Card className="border-blue-200 dark:border-blue-900/50 bg-blue-50/30 dark:bg-blue-950/10">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2"><Upload className="h-4 w-4 text-blue-600" />Import POs from PDF</CardTitle>
-                <CardDescription className="text-xs">Extracts lines matching "PO1: Description" format.</CardDescription>
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Upload className="h-4 w-4 text-blue-600" />Import POs from PDF
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Extracts lines matching "PO1: Description" format.
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div
                   onClick={() => !poExtracting && document.getElementById("po-pdf-upload")?.click()}
                   className={`flex items-center justify-center gap-3 h-16 border-2 border-dashed rounded-lg cursor-pointer transition-all
-                    ${poExtracting ? "border-blue-400 bg-blue-50" : extractedPOs.length > 0 ? "border-emerald-400 bg-emerald-50/50" : "border-muted-foreground/25 hover:bg-blue-50/50 hover:border-blue-400"}`}
+                    ${poExtracting
+                      ? "border-blue-400 bg-blue-50"
+                      : extractedPOs.length > 0
+                        ? "border-emerald-400 bg-emerald-50/50"
+                        : "border-muted-foreground/25 hover:bg-blue-50/50 hover:border-blue-400"
+                    }`}
                 >
-                  {poExtracting ? <><Loader2 className="h-4 w-4 animate-spin text-blue-600" /><span className="text-sm text-blue-600">Reading…</span></>
-                  : extractedPOs.length > 0 ? <><CheckCircle2 className="h-4 w-4 text-emerald-600" /><span className="text-sm font-medium text-emerald-700">Found {extractedPOs.length} POs — click to re-upload</span></>
-                  : <><Upload className="h-4 w-4 text-muted-foreground" /><span className="text-sm">Click to upload PO document</span></>}
+                  {poExtracting
+                    ? <><Loader2 className="h-4 w-4 animate-spin text-blue-600" /><span className="text-sm text-blue-600">Reading…</span></>
+                    : extractedPOs.length > 0
+                      ? <><CheckCircle2 className="h-4 w-4 text-emerald-600" /><span className="text-sm font-medium text-emerald-700">Found {extractedPOs.length} POs — click to re-upload</span></>
+                      : <><Upload className="h-4 w-4 text-muted-foreground" /><span className="text-sm">Click to upload PO document</span></>
+                  }
                 </div>
                 <input id="po-pdf-upload" type="file" accept=".pdf" className="hidden" onChange={handlePoPdfUpload} />
+
                 {extractedPOs.length > 0 && (
                   <div className="space-y-2">
                     <div className="max-h-40 overflow-y-auto space-y-1.5">
                       {extractedPOs.map((po, i) => (
                         <div key={i} className="flex gap-2 text-xs p-2 bg-background rounded border">
                           <Target className="h-3.5 w-3.5 text-blue-500 shrink-0 mt-0.5" />
-                          <span><strong className="text-blue-700 dark:text-blue-400">{po.code}</strong> — {po.description}</span>
+                          <span>
+                            <strong className="text-blue-700 dark:text-blue-400">{po.code}</strong> — {po.description}
+                          </span>
                         </div>
                       ))}
                     </div>
-                    <Button onClick={handlePoImport} disabled={poImporting} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-                      {poImporting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving…</> : `Save ${extractedPOs.length} Program Outcomes`}
+                    <Button
+                      onClick={handlePoImport}
+                      disabled={poImporting}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      {poImporting
+                        ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving…</>
+                        : `Save ${extractedPOs.length} Program Outcomes`
+                      }
                     </Button>
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            {pos.length === 0
-              ? <Card><CardContent className="py-10 text-center text-muted-foreground text-sm">No POs yet. Add manually or upload PDF above.</CardContent></Card>
-              : <div className="grid gap-3">
-                  {pos.map(po => (
-                    <Card key={po.id}>
-                      <CardContent className="flex items-start justify-between pt-4 pb-4">
-                        <div><p className="font-bold text-primary">{po.code}</p><p className="text-sm mt-1">{po.description}</p></div>
-                        <Button variant="ghost" size="icon" onClick={() => deletePO.mutate(po.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-            }
+            {pos.length === 0 ? (
+              <Card>
+                <CardContent className="py-10 text-center text-muted-foreground text-sm">
+                  No POs yet. Add manually or upload PDF above.
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-3">
+                {pos.map(po => (
+                  <Card key={po.id}>
+                    <CardContent className="flex items-start justify-between pt-4 pb-4">
+                      <div>
+                        <p className="font-bold text-primary">{po.code}</p>
+                        <p className="text-sm mt-1">{po.description}</p>
+                      </div>
+                      <Button variant="ghost" size="icon" onClick={() => deletePO.mutate(po.id)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>

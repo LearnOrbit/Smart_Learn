@@ -34,6 +34,7 @@ export interface ClassroomMaterial {
   fileSize: string;
   extractedText: string;
   uploadedAt: number;
+  filePath?: string;
 }
 
 export const getClassroomMaterials = (): ClassroomMaterial[] => {
@@ -176,5 +177,12 @@ export const rejectJoinRequest = (requestId: string) => {
 
   requests[reqIndex].status = "rejected";
   localStorage.setItem("gc_requests", JSON.stringify(requests));
+  triggerSync();
+};
+
+export const leaveClassroom = (classroomId: string, studentName: string) => {
+  const enrollments = getEnrollments();
+  const newEnrollments = enrollments.filter(e => !(e.classroomId === classroomId && e.studentName === studentName));
+  localStorage.setItem("gc_enrollments", JSON.stringify(newEnrollments));
   triggerSync();
 };

@@ -1,5 +1,5 @@
 // API client for calling the FastAPI backend
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8002/api";
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
 
 class APIClient {
   private baseUrl: string;

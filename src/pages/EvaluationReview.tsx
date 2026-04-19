@@ -164,25 +164,33 @@ export default function EvaluationReview() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label>Assignment</Label>
-            <Select value={selectedAssignmentId} onValueChange={(v) => { setSelectedAssignmentId(v); setSelectedSubmissionId(""); }}>
+            <Select value={selectedAssignmentId || undefined} onValueChange={(v) => { setSelectedAssignmentId(v); setSelectedSubmissionId(""); }}>
               <SelectTrigger><SelectValue placeholder="Select assignment..." /></SelectTrigger>
               <SelectContent>
-                {assignments.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>{a.title}</SelectItem>
-                ))}
+                {assignments.length === 0 ? (
+                  <SelectItem value="none" disabled>No assignments found</SelectItem>
+                ) : (
+                  assignments.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>{a.title}</SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
             <Label>Submission</Label>
-            <Select value={selectedSubmissionId} onValueChange={setSelectedSubmissionId} disabled={!selectedAssignmentId}>
+            <Select value={selectedSubmissionId || undefined} onValueChange={setSelectedSubmissionId} disabled={!selectedAssignmentId}>
               <SelectTrigger><SelectValue placeholder={subsLoading ? "Loading..." : "Select submission..."} /></SelectTrigger>
               <SelectContent>
-                {submissions.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.student_email || s.student_name || "Student"} — {s.marks ?? "ungraded"}
-                  </SelectItem>
-                ))}
+                {submissions.length === 0 && !subsLoading ? (
+                  <SelectItem value="none" disabled>No submissions yet</SelectItem>
+                ) : (
+                  submissions.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.student_email || s.student_name || "Student"} — {s.marks ?? "ungraded"}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>

@@ -2,7 +2,7 @@ import { useEffect, useState, ReactNode } from "react";
 import { apiClient } from "@/integrations/api/client";
 import { AuthContext, type AppRole, type AuthUser } from "@/hooks/AuthContext";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL?.replace(/\/api$/, "") || "http://localhost:8002";
+const API_BASE_URL = import.meta.env.VITE_API_URL?.replace(/\/api$/, "") || "http://localhost:8000";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<{ access_token: string } | null>(null);

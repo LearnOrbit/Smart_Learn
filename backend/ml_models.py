@@ -44,9 +44,9 @@ class MLPipeline:
             [
                 data.get("student_marks", 0),
                 data.get("attendance", 0),
-                data.get("internal_assessments", 0),
-                data.get("lab_performance", 0),
-                data.get("assignment_scores", 0),
+                data.get("internal_assessments", 0) * 5,  # Scale 20 to 100
+                data.get("lab_performance", 0) * 4,       # Scale 25 to 100
+                data.get("assignment_scores", 0) * 10,    # Scale 10 to 100
                 data.get("study_hours", 0),
                 data.get("concept_mastery", 0),
             ],

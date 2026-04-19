@@ -353,9 +353,9 @@ class StudentPerformanceData(BaseModel):
 
     student_marks: float = Field(ge=0, le=100)
     attendance: float = Field(ge=0, le=100)
-    internal_assessments: float = Field(ge=0, le=100)
-    lab_performance: float = Field(ge=0, le=100)
-    assignment_scores: float = Field(ge=0, le=100)
+    internal_assessments: float = Field(ge=0, le=20)
+    lab_performance: float = Field(ge=0, le=25)
+    assignment_scores: float = Field(ge=0, le=10)
     study_hours: float = Field(ge=0)
     concept_mastery: float = Field(ge=0, le=100)
 
@@ -548,12 +548,26 @@ class AssignmentCreate(BaseModel):
     description: Optional[str] = ""
     due_date: Optional[datetime] = None
     subject_id: Optional[str] = None
+    classroom_id: Optional[str] = None   # ← links assignment to a classroom
+    status: Optional[str] = "draft"      # ← "draft" | "published"
     total_marks: Optional[int] = None
     generation_method: Optional[str] = "manual"
     learning_outcome_ids: Optional[List[str]] = []
-    # For question generation
     # [{question_text, marks, co_id, difficulty}]
     questions: Optional[List[dict]] = []
+
+
+class QuestionInAssignment(BaseModel):
+    id: str
+    question_number: int
+    question_text: str
+    marks: int
+    difficulty: Optional[str] = "medium"
+    co_id: Optional[str] = None
+    co_code: Optional[str] = None
+
+    class Config:
+        from_attributes = True
 
 
 class AssignmentResponse(BaseModel):
@@ -565,11 +579,14 @@ class AssignmentResponse(BaseModel):
     subject_id: Optional[str] = None
     total_marks: Optional[int] = None
     generation_method: Optional[str] = "manual"
+    status: Optional[str] = "published"
     created_at: datetime
     updated_at: datetime
+    questions: Optional[List[QuestionInAssignment]] = []
 
     class Config:
         from_attributes = True
+
 
 
 # ============= ASSIGNMENT LO MAPPING SCHEMAS =============
@@ -632,9 +649,9 @@ class StudentPerformanceCreate(BaseModel):
     subject_id: Optional[str] = None
     student_marks: float = Field(ge=0, le=100, default=0)
     attendance: float = Field(ge=0, le=100, default=0)
-    internal_assessments: float = Field(ge=0, le=100, default=0)
-    lab_performance: float = Field(ge=0, le=100, default=0)
-    assignment_scores: float = Field(ge=0, le=100, default=0)
+    internal_assessments: float = Field(ge=0, le=20, default=0)
+    lab_performance: float = Field(ge=0, le=25, default=0)
+    assignment_scores: float = Field(ge=0, le=10, default=0)
     study_hours: float = Field(ge=0, default=0)
     concept_mastery: float = Field(ge=0, le=100, default=0)
     teacher_remarks: Optional[str] = ""
@@ -692,8 +709,8 @@ class StudentAnalyticsRequest(BaseModel):
     chapter_marks: List[ChapterPerformance] = Field(
         description="Chapter-wise performance")
     attendance_percentage: float = Field(ge=0, le=100, default=75)
-    lab_performance: float = Field(ge=0, le=100, default=0)
-    assignment_scores: float = Field(ge=0, le=100, default=0)
+    lab_performance: float = Field(ge=0, le=25, default=0)
+    assignment_scores: float = Field(ge=0, le=10, default=0)
 
 
 class TopicStudyInfo(BaseModel):

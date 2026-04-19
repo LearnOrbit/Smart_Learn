@@ -194,57 +194,45 @@ def generate_recommendations(
 
     # Performance-based recommendations
     if performance_level == "Poor":
-        # Subject-specific action plan
         if weak_topics:
-            topics_str = "; ".join(weak_topics[:5])  # First 5 topics
-            recommendations.append(
-                f"Machine Learning: Focus on {topics_str}. Target ~{total_study_hours:.0f} hrs of focused study.")
-        recommendations.append(
-            "Re-attempt practice questions from IA2 paper and work through solutions")
-        recommendations.append(
-            "Schedule daily study sessions of 1-2 hours instead of cramming")
-        recommendations.append(
-            "Consider peer study groups or tutoring support")
+            topics_str = ", ".join(weak_topics[:3])
+            recommendations.append(f"Immediate Action Required: Dedicate {total_study_hours:.1f} hours to master core weak areas: {topics_str}.")
+        recommendations.append("Re-attempt practice questions from recent assessments and analyze model solutions step-by-step.")
+        recommendations.append("Break down daily study sessions using the Pomodoro technique to avoid cognitive overload.")
+        recommendations.append("Seek 1-on-1 tutoring or peer mentoring for critical foundational gaps.")
         if weak_topics:
-            milestones.append(
-                f"Complete {weak_topics[0]} practice exercises within 1 week")
-        milestones.append("Achieve 50% in weak topics within 2 weeks")
+            milestones.append(f"Complete foundational exercises for {weak_topics[0]} by the end of the week.")
+        milestones.append("Elevate scores in weak topics past the 50% threshold within 14 days.")
+        
     elif performance_level == "Average":
         if weak_topics:
-            topics_str = "; ".join(weak_topics[:3])
-            recommendations.append(
-                f"Strengthen weak topics: {topics_str}. Target {total_study_hours * 0.7:.0f} hrs focused study")
-        recommendations.append(
-            "Allocate more time to conceptual understanding and hands-on practice")
-        recommendations.append(
-            "Review weak topics every 3 days to reinforce learning")
+            topics_str = ", ".join(weak_topics[:3])
+            recommendations.append(f"Strategic Focus: You need {total_study_hours * 0.7:.1f} hours of targeted active study on: {topics_str}.")
+        recommendations.append("Transition from passive reading to active recall (e.g., practice tests, whiteboarding).")
+        recommendations.append("Review previously missed questions every 3 days to reinforce neural pathways.")
         if weak_topics:
-            milestones.append(f"Master fundamentals of {weak_topics[0]}")
-        milestones.append("Improve weak topics to 60% within 3 weeks")
+            milestones.append(f"Demonstrate working knowledge of {weak_topics[0]} on the next assessment.")
+        milestones.append("Improve weak topic performance to consistently score above 65% within 3 weeks.")
+        
     elif performance_level == "Good":
         if weak_topics:
-            topics_str = "; ".join(weak_topics)
-            recommendations.append(
-                f"Consolidate {topics_str} through advanced problem-solving")
-        recommendations.append("Move towards mastery of all topics")
-        recommendations.append("Work on complex, real-world applications")
-        milestones.append("Improve overall score to 80% within 1 month")
+            topics_str = ", ".join(weak_topics)
+            recommendations.append(f"Bridge the Gap: Eliminate remaining weaknesses in {topics_str} through advanced problem-solving.")
+        recommendations.append("Consolidate your knowledge by attempting higher-order, real-world application questions.")
+        recommendations.append("Create mind maps to connect distinct concepts together for robust long-term retention.")
+        milestones.append("Maintain strong topics while elevating all weak topics to an 80% baseline.")
+        
     else:  # Excellent
-        recommendations.append(
-            "Focus on advanced applications and research-based projects")
-        recommendations.append("Help peers in understanding complex concepts")
-        recommendations.append(
-            "Explore additional resources for deeper theoretical insights")
-        milestones.append(
-            "Achieve mastery (95%+) in all topics within 2 months")
+        recommendations.append("Challenge Yourself: Focus on advanced applications and research-based scenarios beyond the syllabus.")
+        recommendations.append("Mentor peers in understanding complex concepts (teaching reinforces absolute mastery).")
+        recommendations.append("Explore industry-standard resources and implement a complex capstone-level project.")
+        milestones.append("Achieve absolute mastery (95%+) in all topics within 2 months.")
 
     # Attendance-based recommendations
     if attendance < 75:
-        recommendations.append(
-            f"Improve attendance: Current {attendance}% → Target 85%+")
+        recommendations.append(f"Critical: Your attendance is {attendance}%. Missing lectures limits context. Target 85%+ immediately.")
     elif attendance < 85:
-        recommendations.append(
-            f"Maintain consistent attendance (Current: {attendance}%)")
+        recommendations.append(f"Consistency Warning: Maintain stronger attendance (Current: {attendance}%). Aim for 90%+ for optimal engagement.")
 
     return recommendations, milestones
 

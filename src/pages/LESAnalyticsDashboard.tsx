@@ -56,9 +56,9 @@ function les(p: PerformanceData) {
   return Math.round(
     p.student_marks * w.marks +
     p.attendance * w.attendance +
-    p.internal_assessments * w.ia +
-    p.lab_performance * w.lab +
-    p.assignment_scores * w.assign +
+    (p.internal_assessments / 20 * 100) * w.ia +
+    (p.lab_performance / 25 * 100) * w.lab +
+    (p.assignment_scores / 10 * 100) * w.assign +
     Math.min((p.study_hours / 168) * 100, 100) * w.study +
     p.concept_mastery * w.mastery
   );
@@ -259,9 +259,9 @@ export default function LESAnalyticsDashboard() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <Bar label="Student Marks" value={perf?.student_marks ?? 0} color="bg-blue-500" />
                       <Bar label="Attendance" value={perf?.attendance ?? 0} color="bg-sky-500" />
-                      <Bar label="Internal Assessments" value={perf?.internal_assessments ?? 0} color="bg-indigo-500" />
-                      <Bar label="Lab Performance" value={perf?.lab_performance ?? 0} color="bg-violet-500" />
-                      <Bar label="Assignment Scores" value={perf?.assignment_scores ?? 0} color="bg-purple-500" />
+                      <Bar label="Internal Assessments" value={perf?.internal_assessments ?? 0} max={20} color="bg-indigo-500" />
+                      <Bar label="Lab Performance" value={perf?.lab_performance ?? 0} max={25} color="bg-violet-500" />
+                      <Bar label="Assignment Scores" value={perf?.assignment_scores ?? 0} max={10} color="bg-purple-500" />
                       <Bar label="Study Hours / Week" value={perf?.study_hours ?? 0} max={168} color="bg-fuchsia-500" />
                       <Bar label="Concept Mastery" value={perf?.concept_mastery ?? 0} color="bg-pink-500" />
                     </div>
@@ -406,8 +406,8 @@ export default function LESAnalyticsDashboard() {
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         {[
                           { label: "Weak Concept Detection", icon: TrendingDown, value: perf.concept_mastery < 50 ? "Detected" : "Clear", bad: perf.concept_mastery < 50 },
-                          { label: "Low Outcome Attainment", icon: AlertTriangle, value: perf.internal_assessments < 50 ? "Detected" : "Clear", bad: perf.internal_assessments < 50 },
-                          { label: "Skill Deficiency Analysis", icon: Activity, value: perf.lab_performance < 50 ? "Detected" : "Clear", bad: perf.lab_performance < 50 },
+                          { label: "Low Outcome Attainment", icon: AlertTriangle, value: perf.internal_assessments < 10 ? "Detected" : "Clear", bad: perf.internal_assessments < 10 },
+                          { label: "Skill Deficiency Analysis", icon: Activity, value: perf.lab_performance < 12.5 ? "Detected" : "Clear", bad: perf.lab_performance < 12.5 },
                         ].map(g => (
                           <div key={g.label} className={`p-3 rounded-xl border text-sm ${g.bad ? "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800" : "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800"}`}>
                             <div className={`flex items-center gap-2 font-semibold mb-1 ${g.bad ? "text-red-700 dark:text-red-300" : "text-emerald-700 dark:text-emerald-300"}`}>
