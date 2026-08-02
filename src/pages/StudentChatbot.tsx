@@ -173,7 +173,7 @@ export default function StudentChatbot() {
               {messages.map((msg, i) => (
                 <div key={i} className={`flex gap-4 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                   {msg.role === "assistant" && (
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 shadow-sm">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary shadow-sm">
                       <Sparkles className="h-5 w-5 text-white" />
                     </div>
                   )}
@@ -196,7 +196,7 @@ export default function StudentChatbot() {
 
               {chatMutation.isPending && (
                 <div className="flex gap-4 justify-start">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 opacity-70">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary opacity-70">
                     <Sparkles className="h-5 w-5 text-white animate-pulse" />
                   </div>
                   <div className="bg-white dark:bg-zinc-900 border border-border/50 rounded-3xl rounded-tl-sm px-6 py-4 flex items-center gap-2">

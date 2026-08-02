@@ -276,36 +276,48 @@ export default function TeacherDashboard() {
       <div className="gc-page w-full flex flex-col pt-4">
 
         {/* ── Top bar ── */}
-        <div className="gc-topbar">
+        <div className="flex items-center justify-between mb-8 gap-3 flex-wrap">
           <div>
-            <h1 className="gc-greeting">Welcome back, <span className="gc-name">{teacherName}</span> 👋</h1>
-            <p className="gc-sub">Manage your classrooms, assignments and announcements</p>
+            <h1 className="text-2xl font-extrabold font-heading tracking-tight" style={{ fontFamily: 'var(--font-heading)' }}>
+              {(() => {
+                const hour = new Date().getHours();
+                const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+                return <>{greeting}, <span className="text-gradient">{teacherName}</span> 👋</>;
+              })()}
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">Manage your classrooms, assignments and announcements</p>
           </div>
-          <Button className="gc-join-btn" onClick={() => setCreateClassOpen(true)}>
-            <Plus className="gc-btn-icon" /> Create Class
+          <Button
+            className="rounded-full bg-primary hover:bg-primary/90 shadow-md hover:shadow-lg transition-all duration-200 px-5 gap-1.5"
+            onClick={() => setCreateClassOpen(true)}
+          >
+            <Plus className="h-4 w-4" /> Create Class
           </Button>
         </div>
 
         {/* ── Class Cards Grid ── */}
         {classrooms.length === 0 ? (
-          <Card className="mb-10 border-none shadow-sm">
-            <CardContent className="py-12 flex flex-col items-center">
-              <Users className="h-10 w-10 text-muted-foreground mb-4 opacity-50" />
-              <p className="text-muted-foreground text-sm">No classes created yet.</p>
+          <Card className="mb-10 border-none shadow-card-sm">
+            <CardContent className="py-16 flex flex-col items-center animate-fade-in">
+              <div className="w-16 h-16 rounded-2xl bg-indigo-50 flex items-center justify-center mb-4">
+                <Users className="h-8 w-8 text-indigo-400" />
+              </div>
+              <p className="text-muted-foreground text-sm font-medium">No classes created yet</p>
+              <p className="text-xs text-muted-foreground/60 mt-1">Click "Create Class" to get started</p>
             </CardContent>
           </Card>
         ) : (
-          <div className="gc-grid mb-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-10">
             {classrooms.map((cls) => {
               const pendingCount = joinRequests.filter((r) => r.classroomId === cls.id && r.status === "pending").length;
               const assignmentCount = assignments.filter((a) => a.classroom_id === cls.id).length;
               return (
                 <div
                   key={cls.id}
-                  className="gc-card"
+                  className="group rounded-2xl overflow-hidden border bg-card shadow-card-sm hover:shadow-card-hover transition-all duration-300 cursor-pointer hover:-translate-y-1"
                   onClick={() => { setSelectedClassForDetail(cls); setClassDetailOpen(true); setActiveClassTab("announcements"); }}
                 >
-                  <div className="gc-card-banner" style={{ backgroundColor: cls.bannerColor }}>
+                  <div className="relative h-28 px-4 pt-4 overflow-hidden" style={{ backgroundColor: cls.bannerColor }}>
                     <div className="gc-card-banner-content">
                       <h2 className="gc-card-name">{cls.name}</h2>
                       {cls.section && <p className="gc-card-section">{cls.section}</p>}
@@ -368,7 +380,7 @@ export default function TeacherDashboard() {
                 >
                   <div className="absolute inset-0 bg-gradient-to-tr from-black/20 to-transparent" />
                   <div className="relative z-10 text-white">
-                    <h2 className="text-2xl font-bold">{selectedClassForDetail.name}</h2>
+                    <h2 className="text-2xl font-extrabold font-heading">{selectedClassForDetail.name}</h2>
                     <p className="text-white/80 text-sm">{selectedClassForDetail.section} · {selectedClassForDetail.subject}</p>
                   </div>
                   <div className="absolute top-3 right-3 flex items-center gap-2 z-10">
