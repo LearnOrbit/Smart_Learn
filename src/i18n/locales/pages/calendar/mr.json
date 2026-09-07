@@ -1,0 +1,52 @@
+{
+  "header": {
+    "title": "कॅलेंडर",
+    "description": "असाइनमेंट, परीक्षा, वर्ग आणि घोषणा एका ठिकाणी ट्रॅक करा.",
+    "addEvent": "इव्हेंट जोडा"
+  },
+  "stats": {
+    "totalTitle": "एकूण इव्हेंट्स",
+    "totalDesc": "सर्व नियोजित आयटम",
+    "weekTitle": "या आठवड्यात",
+    "weekDesc": "पुढील 7 दिवस",
+    "assignmentsTitle": "असाइनमेंट",
+    "assignmentsDesc": "गृहपाठ आणि कार्ये",
+    "examsTitle": "परीक्षा",
+    "examsDesc": "चाचण्या आणि मूल्यांकन"
+  },
+  "schedule": {
+    "title": "वेळापत्रक"
+  },
+  "eventTypes": {
+    "assignment": "असाइनमेंट",
+    "announcement": "घोषणा",
+    "class": "वर्ग",
+    "exam": "परीक्षा"
+  },
+  "modal": {
+    "title": "इव्हेंट जोडा",
+    "titleField": "शीर्षक",
+    "titlePlaceholder": "उदा. गणिताचा गृहपाठ देय",
+    "typeField": "प्रकार",
+    "timeField": "वेळ (पर्यायी)",
+    "cancel": "रद्द करा",
+    "addEvent": "इव्हेंट जोडा"
+  },
+  "selectedDay": {
+    "nothingScheduled": "काहीही नियोजित नाही",
+    "nothingScheduledDesc": "या दिवशी कोणतेही इव्हेंट नाही. तयार करण्यासाठी 'इव्हेंट जोडा' वर क्लिक करा."
+  },
+  "upcoming": {
+    "title": "आगामी",
+    "noEvents": "कोणतेही आगामी इव्हेंट नाहीत",
+    "noEventsDesc": "तुमचे वेळापत्रक रिकामे आहे. ट्रॅकवर राहण्यासाठी इव्हेंट्स जोडा.",
+    "today": "आज",
+    "tomorrow": "उद्या",
+    "inDays": "{{count}} दिवसांत"
+  },
+  "toasts": {
+    "eventAdded": "इव्हेंट जोडला",
+    "eventAddedDesc": "{{title}} {{date}} रोजी",
+    "eventRemoved": "इव्हेंट काढला"
+  }
+}

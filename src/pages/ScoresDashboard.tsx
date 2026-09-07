@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { apiClient } from "@/integrations/api/client";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -10,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { loadPageNamespace } from "@/i18n";
 import { Target, BookMarked, Lightbulb, Users, TrendingUp, TrendingDown, Minus, MessageSquare, ClipboardEdit, Save, PlusCircle } from "lucide-react";
 
 interface ScoreRow {
@@ -26,7 +28,8 @@ interface ScoreRow {
 
 // Rule-based feedback generator
 function generateFeedback(
-  scores: { code: string; score: number; type: string }[]
+  scores: { code: string; score: number; type: string }[],
+  t: (key: string, opts?: Record<string, unknown>) => string
 ): string[] {
   const feedback: string[] = [];
   const weak = scores.filter((s) => s.score < 40);
@@ -35,27 +38,27 @@ function generateFeedback(
 
   if (strong.length > 0) {
     feedback.push(
-      `✅ Strong performance in ${strong.map((s) => s.code).join(", ")} (above 70%). Keep it up!`
+      t("scores:feedback.strong", { codes: strong.map((s) => s.code).join(", ") })
     );
   }
   if (moderate.length > 0) {
     feedback.push(
-      `⚠️ Needs improvement in ${moderate.map((s) => s.code).join(", ")} (40-70%). Focus on practice and review.`
+      t("scores:feedback.moderate", { codes: moderate.map((s) => s.code).join(", ") })
     );
   }
   if (weak.length > 0) {
     feedback.push(
-      `🔴 Critical attention needed for ${weak.map((s) => s.code).join(", ")} (below 40%). Consider revisiting fundamentals.`
+      t("scores:feedback.weak", { codes: weak.map((s) => s.code).join(", ") })
     );
   }
 
   const avg = scores.length > 0 ? scores.reduce((a, b) => a + b.score, 0) / scores.length : 0;
   if (avg >= 70) {
-    feedback.push("📊 Overall: Excellent progress. You're on track for strong attainment.");
+    feedback.push(t("scores:feedback.overallExcellent"));
   } else if (avg >= 40) {
-    feedback.push("📊 Overall: Moderate progress. Consistent effort will lead to improvement.");
+    feedback.push(t("scores:feedback.overallModerate"));
   } else if (scores.length > 0) {
-    feedback.push("📊 Overall: Below expectations. Seek additional support and dedicate more study time.");
+    feedback.push(t("scores:feedback.overallLow"));
   }
 
   return feedback;
@@ -82,6 +85,8 @@ interface AssignmentEntry {
 function GradeSubmissionsPanel({ studentId }: { studentId: string }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { t } = useTranslation("pages");
+  useEffect(() => { void loadPageNamespace("scores"); }, []);
 
   // All assignments
   const { data: assignments = [] } = useQuery({
@@ -114,9 +119,9 @@ function GradeSubmissionsPanel({ studentId }: { studentId: string }) {
       queryClient.invalidateQueries({ queryKey: ["student_submissions", studentId] });
       queryClient.invalidateQueries({ queryKey: ["student_scores", studentId] });
       queryClient.invalidateQueries({ queryKey: ["student_submissions_history", studentId] });
-      toast({ title: "Score saved!" });
+      toast({ title: t("scores:grade.toasts.saved") });
     },
-    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("scores:grade.toasts.error"), description: e.message, variant: "destructive" }),
   });
 
   // Create a submission on behalf of the student (so teacher can then grade it)
@@ -131,9 +136,9 @@ function GradeSubmissionsPanel({ studentId }: { studentId: string }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["student_submissions", studentId] });
-      toast({ title: "Submission created — enter marks below" });
+      toast({ title: t("scores:grade.toasts.submissionCreated") });
     },
-    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("scores:grade.toasts.error"), description: e.message, variant: "destructive" }),
   });
 
   // Map assignment_id -> submission for quick lookup
@@ -179,13 +184,13 @@ function GradeSubmissionsPanel({ studentId }: { studentId: string }) {
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center gap-2">
-          <ClipboardEdit className="h-4 w-4" /> Enter / Edit Scores
+          <ClipboardEdit className="h-4 w-4" /> {t("scores:grade.title")}
         </CardTitle>
-        <CardDescription>Grade each assignment. Scores auto-compute into LO → CO → PO attainment above.</CardDescription>
+        <CardDescription>{t("scores:grade.description")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         {assignments.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No assignments found. Create assignments first in the Teacher Dashboard.</p>
+          <p className="text-sm text-muted-foreground">{t("scores:grade.noAssignments")}</p>
         ) : (
           <div className="divide-y">
             {assignments.map((a) => {
@@ -199,7 +204,9 @@ function GradeSubmissionsPanel({ studentId }: { studentId: string }) {
                     </div>
                     {sub ? (
                       <Badge variant={sub.marks != null ? "default" : "secondary"} className="text-xs">
-                        {sub.marks != null ? `${sub.marks} marks` : "Not graded"}
+                        {sub.marks != null
+                          ? t("scores:grade.marksWithCount", { count: sub.marks })
+                          : t("scores:grade.notGraded")}
                       </Badge>
                     ) : (
                       <Button
@@ -209,7 +216,7 @@ function GradeSubmissionsPanel({ studentId }: { studentId: string }) {
                         disabled={createMutation.isPending}
                       >
                         <PlusCircle className="h-3 w-3 mr-1" />
-                        Add Entry
+                        {t("scores:grade.addEntry")}
                       </Button>
                     )}
                   </div>
@@ -217,19 +224,19 @@ function GradeSubmissionsPanel({ studentId }: { studentId: string }) {
                     <div className="flex items-center gap-2">
                       <Input
                         type="number"
-                        placeholder="Marks"
+                        placeholder={t("scores:grade.marksPlaceholder")}
                         className="w-24 h-8 text-sm"
                         value={getEdit(sub).marks}
                         onChange={(e) => setField(sub.id, "marks", e.target.value)}
                       />
                       <Input
-                        placeholder="Grade"
+                        placeholder={t("scores:grade.gradePlaceholder")}
                         className="w-20 h-8 text-sm"
                         value={getEdit(sub).grade}
                         onChange={(e) => setField(sub.id, "grade", e.target.value)}
                       />
                       <Input
-                        placeholder="Feedback"
+                        placeholder={t("scores:grade.feedbackPlaceholder")}
                         className="flex-1 h-8 text-sm"
                         value={getEdit(sub).feedback}
                         onChange={(e) => setField(sub.id, "feedback", e.target.value)}
@@ -240,7 +247,7 @@ function GradeSubmissionsPanel({ studentId }: { studentId: string }) {
                         onClick={() => handleSave(sub)}
                         disabled={gradeMutation.isPending}
                       >
-                        <Save className="h-3 w-3 mr-1" /> Save
+                        <Save className="h-3 w-3 mr-1" /> {t("scores:grade.save")}
                       </Button>
                     </div>
                   )}
@@ -269,6 +276,8 @@ function ScoreBar({ label, score, icon: Icon }: { label: string; score: number; 
 }
 
 function StudentScoresView({ studentId }: { studentId: string }) {
+  const { t } = useTranslation("pages");
+  useEffect(() => { void loadPageNamespace("scores"); }, []);
   const { data: scores = [], isLoading } = useQuery({
     queryKey: ["student_scores", studentId],
     queryFn: async () => {
@@ -303,12 +312,12 @@ function StudentScoresView({ studentId }: { studentId: string }) {
 
   const assignmentMap = new Map(allAssignments.map((a) => [a.id, a.title]));
 
-  if (isLoading) return <p className="text-muted-foreground">Calculating scores...</p>;
+  if (isLoading) return <p className="text-muted-foreground">{t("scores:view.loading")}</p>;
 
   if (scores.length === 0 && submissions.length === 0) return (
     <Card>
       <CardContent className="py-8 text-center text-muted-foreground">
-        No scores available yet. Scores appear once assignments are graded.
+        {t("scores:view.noScores")}
       </CardContent>
     </Card>
   );
@@ -344,7 +353,7 @@ function StudentScoresView({ studentId }: { studentId: string }) {
   const allScores = [
     ...[...loMap.entries()].map(([, { code, score }]) => ({ code, score, type: "LO" })),
   ];
-  const feedbackMessages = generateFeedback(allScores);
+  const feedbackMessages = generateFeedback(allScores, t);
 
   return (
     <div className="space-y-6">
@@ -353,9 +362,9 @@ function StudentScoresView({ studentId }: { studentId: string }) {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
-              <ClipboardEdit className="h-4 w-4" /> Graded Assignments
+              <ClipboardEdit className="h-4 w-4" /> {t("scores:view.graded.title")}
             </CardTitle>
-            <CardDescription>Marks, grades, and feedback from your teacher</CardDescription>
+            <CardDescription>{t("scores:view.graded.description")}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="divide-y">
@@ -363,7 +372,7 @@ function StudentScoresView({ studentId }: { studentId: string }) {
                 <div key={s.id} className="py-3 first:pt-0 last:pb-0 flex items-center justify-between gap-4">
                   <div className="min-w-0 flex-1">
                     <p className="font-medium text-sm truncate">
-                      {assignmentMap.get(s.assignment_id) || "Assignment"}
+                      {assignmentMap.get(s.assignment_id) || t("scores:view.assignment")}
                     </p>
                     {s.feedback && (
                       <p className="text-xs text-muted-foreground mt-0.5 truncate">{s.feedback}</p>
@@ -371,7 +380,7 @@ function StudentScoresView({ studentId }: { studentId: string }) {
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     {s.marks != null && (
-                      <Badge variant="default" className="text-xs">{s.marks} marks</Badge>
+                      <Badge variant="default" className="text-xs">{t("scores:grade.marksWithCount", { count: s.marks })}</Badge>
                     )}
                     {s.grade && (
                       <Badge variant="secondary" className="text-xs">{s.grade}</Badge>
@@ -389,29 +398,29 @@ function StudentScoresView({ studentId }: { studentId: string }) {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
-              <MessageSquare className="h-4 w-4" /> Performance Insights
+              <MessageSquare className="h-4 w-4" /> {t("scores:view.insights.title")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {movingAvg !== null && (
               <div className="flex flex-wrap gap-4 text-sm">
                 <div className="flex items-center gap-2 rounded-md bg-muted px-3 py-2">
-                  <span className="text-muted-foreground">Recent Avg (last 3):</span>
+                  <span className="text-muted-foreground">{t("scores:view.insights.recentAvg")}</span>
                   <span className="font-bold">{movingAvg.toFixed(1)}</span>
                 </div>
                 {overallAvg !== null && (
                   <div className="flex items-center gap-2 rounded-md bg-muted px-3 py-2">
-                    <span className="text-muted-foreground">Overall Avg:</span>
+                    <span className="text-muted-foreground">{t("scores:view.insights.overallAvg")}</span>
                     <span className="font-bold">{overallAvg.toFixed(1)}</span>
                   </div>
                 )}
                 {trend && (
                   <div className="flex items-center gap-2 rounded-md bg-muted px-3 py-2">
-                    <span className="text-muted-foreground">Trend:</span>
+                    <span className="text-muted-foreground">{t("scores:view.insights.trend")}</span>
                     {trend === "improving" && <TrendingUp className="h-4 w-4 text-green-600" />}
                     {trend === "declining" && <TrendingDown className="h-4 w-4 text-red-600" />}
                     {trend === "stable" && <Minus className="h-4 w-4 text-yellow-600" />}
-                    <span className="font-medium capitalize">{trend}</span>
+                    <span className="font-medium">{t(`scores:view.insights.${trend}`)}</span>
                   </div>
                 )}
               </div>
@@ -432,7 +441,7 @@ function StudentScoresView({ studentId }: { studentId: string }) {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
-                <Target className="h-4 w-4" /> Program Outcomes
+                <Target className="h-4 w-4" /> {t("scores:view.po.title")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -445,7 +454,7 @@ function StudentScoresView({ studentId }: { studentId: string }) {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
-                <BookMarked className="h-4 w-4" /> Course Outcomes
+                <BookMarked className="h-4 w-4" /> {t("scores:view.co.title")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -458,7 +467,7 @@ function StudentScoresView({ studentId }: { studentId: string }) {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
-                <Lightbulb className="h-4 w-4" /> Learning Outcomes
+                <Lightbulb className="h-4 w-4" /> {t("scores:view.lo.title")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -475,6 +484,8 @@ function StudentScoresView({ studentId }: { studentId: string }) {
 
 export default function ScoresDashboard() {
   const { role, user } = useAuth();
+  const { t } = useTranslation("pages");
+  useEffect(() => { void loadPageNamespace("scores"); }, []);
   const [selectedStudent, setSelectedStudent] = useState<string>("");
 
   const { data: students = [] } = useQuery({
@@ -492,8 +503,8 @@ export default function ScoresDashboard() {
       <DashboardLayout>
         <div className="space-y-6">
           <div>
-            <h2 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-display)' }}>My Scores</h2>
-            <p className="text-muted-foreground">Your LO, CO, and PO attainment scores</p>
+            <h2 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-display)' }}>{t("scores:student.title")}</h2>
+            <p className="text-muted-foreground">{t("scores:student.description")}</p>
           </div>
           <StudentScoresView studentId={user!.id} />
         </div>
@@ -505,14 +516,14 @@ export default function ScoresDashboard() {
     <DashboardLayout>
       <div className="space-y-6">
         <div>
-          <h2 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-display)' }}>Student Scores</h2>
-          <p className="text-muted-foreground">View LO → CO → PO attainment per student</p>
+          <h2 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-display)' }}>{t("scores:teacher.title")}</h2>
+          <p className="text-muted-foreground">{t("scores:teacher.description")}</p>
         </div>
 
         <div className="max-w-xs">
           <Select value={selectedStudent} onValueChange={setSelectedStudent}>
             <SelectTrigger>
-              <SelectValue placeholder="Select a student" />
+              <SelectValue placeholder={t("scores:teacher.selectStudent")} />
             </SelectTrigger>
             <SelectContent>
               {students.map((s: any) => (
@@ -533,7 +544,7 @@ export default function ScoresDashboard() {
           <Card>
             <CardContent className="py-8 text-center text-muted-foreground">
               <Users className="h-8 w-8 mx-auto mb-2 opacity-40" />
-              Select a student to view their scores.
+              {t("scores:teacher.selectStudentHint")}
             </CardContent>
           </Card>
         )}

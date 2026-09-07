@@ -1,0 +1,127 @@
+{
+  "title": "असाइनमेंट तयार करा",
+  "description": "तुमच्या विद्यार्थ्यांसाठी असाइनमेंट डिझाइन, जनरेट आणि वितरित करा",
+  "details": {
+    "cardTitle": "असाइनमेंट तपशील",
+    "titleLabel": "शीर्षक",
+    "titlePlaceholder": "उदा. घटक 1 सराव प्रश्न",
+    "descriptionLabel": "वर्णन",
+    "descriptionPlaceholder": "विद्यार्थ्यांनी काय करावे ते थोडक्यात सांगा...",
+    "dueDateLabel": "सबमिट करण्याची शेवटची तारीख",
+    "subjectLabel": "विषय"
+  },
+  "classroom": {
+    "label": "वर्गाला पाठवा",
+    "hint": "हे असाइनमेंट नोंदणीकृत विद्यार्थ्यांसोबत शेअर करण्यासाठी वर्ग निवडा.",
+    "placeholder": "वर्ग निवडा...",
+    "none": "वर्ग नाही (खाजगीरित्या जतन करा)",
+    "willBeVisible": "या वर्गातील विद्यार्थ्यांना दिसेल:",
+    "emptyHint": "असाइनमेंट विद्यार्थ्यांना दृश्यमान करण्यासाठी वर्ग निवडा"
+  },
+  "pastPapers": {
+    "title": "मागील प्रश्नपत्रके संदर्भ पूल",
+    "available_one": "{{count}} प्रश्न उपलब्ध",
+    "available_other": "{{count}} प्रश्न उपलब्ध",
+    "upload": "PDF अपलोड करा",
+    "uploading": "अपलोड होत आहे...",
+    "clear": "पूल साफ करा",
+    "blendHint": "सुमारे 40% जनरेट केलेले प्रश्न या पूलमधून मिसळले जातील."
+  },
+  "courseOutcomes": {
+    "label": "अभ्यासक्रम परिणाम",
+    "noCos": "अद्याप CO परिभाषित नाहीत. Outcomes पृष्ठावर जोडा.",
+    "selected_one": "{{count}} CO निवडले",
+    "selected_other": "{{count}} CO निवडले"
+  },
+  "summary": {
+    "title": "सारांश",
+    "questions": "प्रश्न",
+    "totalMarks": "एकूण गुण",
+    "losLinked": "जोडलेले LO",
+    "classroom": "वर्ग"
+  },
+  "actions": {
+    "preview": "असाइनमेंट पूर्वावलोकन",
+    "hidePreview": "पूर्वावलोकन लपवा",
+    "saveDraft": "मसुदा जतन करा",
+    "sendToStudents": "विद्यार्थ्यांना पाठवा"
+  },
+  "hints": {
+    "needTitle": "सबमिशन सक्षम करण्यासाठी शीर्षक जोडा",
+    "needQuestions": "आधी प्रश्न जनरेट किंवा जोडा",
+    "noClassroom": "वर्ग निवडलेला नाही — विद्यार्थी हे पाहू शकणार नाहीत"
+  },
+  "generation": {
+    "title": "प्रश्न निर्मिती",
+    "description": "अभ्यासक्रम परिणामांमधून, सिलॅबस स्निपेटमधून प्रश्न तयार करा, किंवा स्वतः लिहा.",
+    "tabs": {
+      "co": "CO आधारित",
+      "syllabus": "सिलॅबस",
+      "manual": "मॅन्युअल"
+    },
+    "coTab": {
+      "selectLabel": "अभ्यासक्रम परिणाम निवडा",
+      "noCosHint": "या विषयासाठी अद्याप CO परिभाषित नाहीत.",
+      "numQuestions": "प्रश्नांची संख्या",
+      "marksPerQuestion": "प्रति प्रश्न गुण",
+      "difficulty": "अडचण",
+      "difficulty_easy": "सोपे",
+      "difficulty_medium": "मध्यम",
+      "difficulty_hard": "कठीण",
+      "generate": "CO मधून जनरेट करा",
+      "generating": "जनरेट होत आहे..."
+    },
+    "syllabusTab": {
+      "textLabel": "सिलॅबस मजकूर",
+      "placeholder": "सिलॅबसचा मजकूर इथे पेस्ट करा...",
+      "numQuestions": "प्रश्नांची संख्या",
+      "marksPerQuestion": "प्रति प्रश्न गुण",
+      "difficulty": "अडचण",
+      "difficulty_easy": "सोपे",
+      "difficulty_medium": "मध्यम",
+      "difficulty_hard": "कठीण",
+      "generate": "सिलॅबसवरून जनरेट करा",
+      "generating": "जनरेट होत आहे..."
+    },
+    "manualTab": {
+      "description": "तुमचे स्वतःचे प्रश्न लिहा आणि गुण मॅन्युअली कॉन्फिगर करा.",
+      "addQuestion": "प्रश्न जोडा"
+    }
+  },
+  "preview": {
+    "cardTitle": "असाइनमेंट पूर्वावलोकन",
+    "pendingApproval": "मंजूरी प्रलंबित",
+    "untitled": "शीर्षक नसलेले असाइनमेंट",
+    "editQuestions": "प्रश्न संपादित करा",
+    "approveAndSend": "मंजूर करा आणि विद्यार्थ्यांना पाठवा"
+  },
+  "questions": {
+    "header": "प्रश्न ({{count}}) — {{marks}} गुण",
+    "uploadSolution": "उत्तर PDF अपलोड करा",
+    "extracting": "काढत आहे...",
+    "modelAnswer": "मॉडेल उत्तर आणि रुब्रिक",
+    "filled": "भरलेले",
+    "modelAnswerLabel": "मॉडेल उत्तर",
+    "rubricLabel": "रुब्रिक / गुणदान निकष",
+    "expectedPlaceholder": "अपेक्षित बरोबर उत्तर",
+    "rubricPlaceholder": "उदा. व्याख्येसाठी 2 गुण, उदाहरणासाठी 1...",
+    "noText": "प्रश्नाचा मजकूर नाही"
+  },
+  "toasts": {
+    "questionsGenerated": "{{count}} प्रश्न जनरेट झाले!",
+    "generationFailed": "प्रश्न जनरेशन अयशस्वी",
+    "pastPaperUploaded": "मागील प्रश्नपत्रिका अपलोड झाली",
+    "uploadFailed": "अपलोड अयशस्वी",
+    "pastPapersCleared": "पूल साफ झाला",
+    "clearFailed": "पूल साफ करता आला नाही",
+    "textExtracted": "PDF मधून मजकूर काढला",
+    "extractionFailed": "काढणे अयशस्वी",
+    "solutionExtracted": "उत्तर PDF काढले",
+    "distributed": "प्रश्नांमध्ये वितरित केले",
+    "addQuestionsFirst": "आधी कमीतकमी एक प्रश्न जोडा",
+    "assignmentSent": "असाइनमेंट पाठवले",
+    "studentsCanSee": "विद्यार्थी आता हे असाइनमेंट पाहू शकतात",
+    "draftSaved": "मसुदा जतन झाला",
+    "error": "काहीतरी चूक झाली"
+  }
+}

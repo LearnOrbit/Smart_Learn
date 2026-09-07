@@ -1,0 +1,78 @@
+{
+  "title": "Settings",
+  "description": "Manage your account, preferences, and notifications.",
+  "reset": "Reset",
+  "saveChanges": "Save changes",
+  "tabs": {
+    "profile": "Profile",
+    "notifications": "Notifications",
+    "appearance": "Appearance",
+    "security": "Security"
+  },
+  "profile": {
+    "infoTitle": "Profile information",
+    "infoDescription": "Update your personal details. This is how others will see you on the platform.",
+    "yourName": "Your name",
+    "active": "Active",
+    "fullName": "Full name",
+    "fullNamePlaceholder": "Enter your full name",
+    "email": "Email",
+    "emailPlaceholder": "you@example.com",
+    "emailHelp": "Email is managed by your account provider.",
+    "bio": "Bio",
+    "bioPlaceholder": "Tell us a bit about yourself…",
+    "privacyTitle": "Privacy",
+    "privacyDescription": "Control who can see your profile and activity.",
+    "profileVisibility": "Profile visibility",
+    "visibilityPublic": "Anyone on the platform",
+    "visibilityClassmates": "Only your classmates",
+    "visibilityPrivate": "Only you"
+  },
+  "notifications": {
+    "emailTitle": "Email notifications",
+    "emailDescription": "Choose what we email you about.",
+    "emailItem": "Email notifications",
+    "emailItemDesc": "Receive updates via email",
+    "assignmentReminders": "Assignment reminders",
+    "assignmentRemindersDesc": "Get reminders before deadlines",
+    "announcementAlerts": "Announcement alerts",
+    "announcementAlertsDesc": "When teachers post announcements",
+    "weeklyDigest": "Weekly digest",
+    "weeklyDigestDesc": "Summary of your week every Monday",
+    "pushTitle": "Push notifications",
+    "pushDescription": "Real-time alerts in your browser.",
+    "browserPush": "Browser push notifications",
+    "browserPushDesc": "Show notifications even when Smart Learn isn't focused"
+  },
+  "appearance": {
+    "themeTitle": "Theme",
+    "themeDescription": "Pick the look that feels right.",
+    "themeMode": "Theme mode",
+    "themeModeDesc": "Switch between light, dark, or follow system."
+  },
+  "security": {
+    "passwordTitle": "Password",
+    "passwordDescription": "Change your password regularly to keep your account secure.",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "newPasswordPlaceholder": "At least 8 characters",
+    "confirmNewPassword": "Confirm new password",
+    "confirmNewPasswordPlaceholder": "Repeat new password",
+    "updatePassword": "Update password",
+    "sessionTitle": "Session",
+    "sessionDescription": "Manage your active session.",
+    "signOut": "Sign out",
+    "dangerTitle": "Danger zone",
+    "dangerDescription": "Irreversible actions. Please be certain.",
+    "deleteAccount": "Delete account"
+  },
+  "toasts": {
+    "saved": "Settings saved",
+    "savedDescription": "Your changes have been applied.",
+    "reset": "Settings reset to defaults",
+    "signedOut": "Signed out",
+    "deleteConfirm": "Delete account? This action cannot be undone.",
+    "deleteRequested": "Account deletion requested",
+    "deleteRequestedDescription": "Please contact support to complete account deletion."
+  }
+}

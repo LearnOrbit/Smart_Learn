@@ -6,86 +6,148 @@
 
 @layer base {
   :root {
-    --background: 40 20% 97%;
-    --foreground: 220 25% 12%;
+    /* Core - Light Mode (Premium EdTech Aesthetic) */
+    --background: 210 20% 98%;
+    --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 25% 12%;
+    --card-foreground: 222 47% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 25% 12%;
+    --popover-foreground: 222 47% 11%;
 
-    --primary: 168 55% 38%;
+    /* Primary - Teal/Green for educational trust */
+    --primary: 166 62% 34%;
     --primary-foreground: 0 0% 100%;
+    --primary-hover: 166 62% 28%;
+    --primary-light: 166 62% 42%;
 
-    --secondary: 40 25% 92%;
-    --secondary-foreground: 220 25% 12%;
+    /* Secondary - Neutral warm gray */
+    --secondary: 210 20% 94%;
+    --secondary-foreground: 222 47% 11%;
+    --secondary-hover: 210 20% 88%;
 
-    --muted: 40 15% 94%;
-    --muted-foreground: 220 10% 46%;
+    /* Muted - For subtle elements */
+    --muted: 210 20% 94%;
+    --muted-foreground: 215 25% 45%;
 
-    --accent: 30 60% 52%;
+    /* Accent - Warm amber for highlights/CTAs */
+    --accent: 36 100% 50%;
     --accent-foreground: 0 0% 100%;
+    --accent-hover: 36 100% 44%;
 
+    /* Destructive - Red for errors */
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
+    --destructive-hover: 0 72% 45%;
 
-    --border: 220 13% 87%;
-    --input: 220 13% 87%;
-    --ring: 168 55% 38%;
+    /* Borders & Inputs */
+    --border: 214 20% 88%;
+    --input: 214 20% 88%;
+    --ring: 166 62% 34%;
 
-    --radius: 0.625rem;
+    /* Radius */
+    --radius: 0.75rem;
+    --radius-sm: 0.375rem;
+    --radius-lg: 1rem;
+    --radius-xl: 1.5rem;
 
-    --sidebar-background: 40 20% 97%;
-    --sidebar-foreground: 220 25% 12%;
-    --sidebar-primary: 168 55% 38%;
+    /* Sidebar */
+    --sidebar-background: 210 20% 98%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 166 62% 34%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 40 25% 92%;
-    --sidebar-accent-foreground: 220 25% 12%;
-    --sidebar-border: 220 13% 87%;
-    --sidebar-ring: 168 55% 38%;
+    --sidebar-accent: 210 20% 92%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 214 20% 88%;
+    --sidebar-ring: 166 62% 34%;
 
+    /* Typography Scale */
     --font-display: 'DM Serif Display', serif;
     --font-body: 'DM Sans', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+
+    /* Shadows */
+    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.03);
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.07), 0 1px 2px -1px rgb(0 0 0 / 0.07);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.07);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.07), 0 4px 6px -4px rgb(0 0 0 / 0.07);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.07), 0 8px 10px -6px rgb(0 0 0 / 0.07);
+    --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.12);
+
+    /* Transitions */
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-normal: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Z-Index Scale */
+    --z-dropdown: 100;
+    --z-sticky: 200;
+    --z-fixed: 300;
+    --z-modal-backdrop: 400;
+    --z-modal: 500;
+    --z-popover: 600;
+    --z-tooltip: 700;
   }
 
   .dark {
-    --background: 220 25% 8%;
-    --foreground: 40 20% 95%;
+    /* Core - Dark Mode (Premium Deep Slate) */
+    --background: 224 71% 4%;
+    --foreground: 210 40% 98%;
 
-    --card: 220 25% 11%;
-    --card-foreground: 40 20% 95%;
+    --card: 224 71% 6%;
+    --card-foreground: 210 40% 98%;
 
-    --popover: 220 25% 11%;
-    --popover-foreground: 40 20% 95%;
+    --popover: 224 71% 6%;
+    --popover-foreground: 210 40% 98%;
 
-    --primary: 168 55% 42%;
-    --primary-foreground: 0 0% 100%;
+    /* Primary - Brighter teal for dark mode */
+    --primary: 166 62% 46%;
+    --primary-foreground: 224 71% 4%;
+    --primary-hover: 166 62% 52%;
+    --primary-light: 166 62% 38%;
 
-    --secondary: 220 20% 16%;
-    --secondary-foreground: 40 20% 95%;
+    /* Secondary - Elevated dark surface */
+    --secondary: 224 71% 10%;
+    --secondary-foreground: 210 40% 98%;
+    --secondary-hover: 224 71% 14%;
 
-    --muted: 220 20% 16%;
-    --muted-foreground: 220 10% 60%;
+    /* Muted */
+    --muted: 224 71% 10%;
+    --muted-foreground: 215 20% 65%;
 
-    --accent: 30 60% 52%;
-    --accent-foreground: 0 0% 100%;
+    /* Accent - Warmer amber for dark */
+    --accent: 36 100% 55%;
+    --accent-foreground: 224 71% 4%;
+    --accent-hover: 36 100% 60%;
 
-    --destructive: 0 62% 30%;
+    /* Destructive */
+    --destructive: 0 63% 55%;
     --destructive-foreground: 0 0% 100%;
+    --destructive-hover: 0 63% 60%;
 
-    --border: 220 20% 20%;
-    --input: 220 20% 20%;
-    --ring: 168 55% 42%;
+    /* Borders & Inputs */
+    --border: 224 71% 14%;
+    --input: 224 71% 14%;
+    --ring: 166 62% 46%;
 
-    --sidebar-background: 220 25% 8%;
-    --sidebar-foreground: 40 20% 95%;
-    --sidebar-primary: 168 55% 42%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 20% 16%;
-    --sidebar-accent-foreground: 40 20% 95%;
-    --sidebar-border: 220 20% 20%;
-    --sidebar-ring: 168 55% 42%;
+    /* Sidebar */
+    --sidebar-background: 224 71% 4%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 166 62% 46%;
+    --sidebar-primary-foreground: 224 71% 4%;
+    --sidebar-accent: 224 71% 10%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 224 71% 14%;
+    --sidebar-ring: 166 62% 46%;
+
+    /* Shadows - Deeper for dark mode */
+    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.15);
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.2), 0 1px 2px -1px rgb(0 0 0 / 0.2);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.2), 0 2px 4px -2px rgb(0 0 0 / 0.2);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.25), 0 4px 6px -4px rgb(0 0 0 / 0.2);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.3), 0 8px 10px -6px rgb(0 0 0 / 0.25);
+    --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.4);
   }
 }
 
@@ -97,9 +159,71 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-body);
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
-  h1, h2, h3 {
+  h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
+    font-weight: 400;
+    letter-spacing: -0.02em;
   }
+
+  /* Smooth theme transitions */
+  *,
+  *::before,
+  *::after {
+    transition: background-color var(--transition-normal),
+                border-color var(--transition-normal),
+                color var(--transition-normal),
+                box-shadow var(--transition-normal);
+  }
+
+  /* Disable transitions during theme switch to prevent flashing */
+  .theme-transitioning *,
+  .theme-transitioning *::before,
+  .theme-transitioning *::after {
+    transition: none !important;
+  }
+
+  /* Focus visible styles */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  /* Selection */
+  ::selection {
+    @apply bg-primary/20 text-primary-foreground;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/20 rounded-full hover:bg-muted-foreground/40;
+  }
+  ::-webkit-scrollbar-corner {
+    @apply bg-transparent;
+  }
+}
+
+/* Utility classes for design tokens */
+@layer utilities {
+  .shadow-xs { box-shadow: var(--shadow-xs); }
+  .shadow-sm { box-shadow: var(--shadow-sm); }
+  .shadow-md { box-shadow: var(--shadow-md); }
+  .shadow-lg { box-shadow: var(--shadow-lg); }
+  .shadow-xl { box-shadow: var(--shadow-xl); }
+  .shadow-2xl { box-shadow: var(--shadow-2xl); }
+
+  .transition-fast { transition-duration: 150ms; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); }
+  .transition-normal { transition-duration: 200ms; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); }
+  .transition-slow { transition-duration: 300ms; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); }
+
+  .text-balance { text-wrap: balance; }
+  .text-pretty { text-wrap: pretty; }
 }

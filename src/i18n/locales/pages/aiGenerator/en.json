@@ -1,0 +1,142 @@
+{
+  "header": {
+    "title": "AI Assessment Generator",
+    "description": "Generate questions, MCQs, and quizzes with AI. The OpenAI API key stays on the server — your browser never sees it.",
+    "teachersOnlyTitle": "AI Assessment Generator",
+    "teachersOnlyDesc": "This feature is for teachers only."
+  },
+  "intro": {
+    "title": "How it works",
+    "body": "Choose a tab: Question & Answer for descriptive questions, MCQ for 4-option multiple choice, or Quiz to assemble saved MCQs into a quiz. Generation can be grounded in a topic, a study note you paste, or a document you upload (PDF / image — uses our existing OCR)."
+  },
+  "tabs": {
+    "qa": "Question & Answer",
+    "mcq": "MCQ",
+    "quiz": "Quiz"
+  },
+  "gate": {
+    "title": "Teachers only",
+    "description": "Sign in as a teacher to generate questions, MCQs, and quizzes with AI."
+  },
+  "form": {
+    "generationSource": "Generation source",
+    "topic": "Topic",
+    "topicPlaceholder": "e.g. Newton's Laws of Motion",
+    "subjectLabel": "Subject (optional)",
+    "subjectPlaceholder": "Choose a subject",
+    "coLabel": "Course outcome (optional)",
+    "coPlaceholder": "Choose a CO",
+    "difficulty": "Difficulty",
+    "marksPerQ": "Marks / question",
+    "countLabel": "Count (1–20)",
+    "studyMaterial": "Study material",
+    "studyMaterialPlaceholder": "Paste your notes or syllabus text here…",
+    "documentLabel": "Document (PDF or image)",
+    "chooseFile": "Choose a file",
+    "extractedHint": "Extracted {{count}} characters from previous upload.",
+    "generating": "Generating…",
+    "generateQA": "Generate Q&A",
+    "generateMCQ": "Generate MCQs"
+  },
+  "source": {
+    "topicLabel": "Topic",
+    "topicDesc": "Generate from a topic name only",
+    "syllabusLabel": "Study Material",
+    "syllabusDesc": "Generate from a study note you paste",
+    "documentLabel": "Uploaded Document",
+    "documentDesc": "Generate from a PDF or image (OCR)"
+  },
+  "difficulty": {
+    "easy": "Easy",
+    "medium": "Medium",
+    "hard": "Hard"
+  },
+  "regenDialog": {
+    "title": "Regenerate question",
+    "description": "Tell the AI how to change the question. The topic, CO, and difficulty will be preserved.",
+    "original": "Original:",
+    "placeholder": "e.g. Make this harder, add a code example, focus on applications…",
+    "cancel": "Cancel",
+    "regenerate": "Regenerate"
+  },
+  "qaCard": {
+    "editingBadge": "Editing #{{index}}",
+    "cancel": "Cancel",
+    "done": "Done",
+    "questionLabel": "Question",
+    "answerLabel": "Answer",
+    "difficultyLabel": "Difficulty",
+    "bloomLabel": "Bloom",
+    "marksLabel": "Marks",
+    "bloomPlaceholder": "—",
+    "saveEdits": "Save edits",
+    "editTitle": "Edit",
+    "regenTitle": "Regenerate",
+    "saveTitle": "Save to bank",
+    "deleteTitle": "Delete",
+    "showAnswer": "Show answer"
+  },
+  "mcqCard": {
+    "mark_one": "mark",
+    "mark_other": "marks",
+    "addToQuizTitle": "Add to quiz",
+    "showExplanation": "Show explanation"
+  },
+  "qaTab": {
+    "resultsHeader": "Generated questions ({{count}})",
+    "clear": "Clear",
+    "emptyTitle": "No questions yet",
+    "emptyDesc": "Fill in the form above and click Generate. Results appear here — edit, regenerate, or save them to your bank."
+  },
+  "mcqTab": {
+    "resultsHeader": "Generated MCQs ({{count}})",
+    "clear": "Clear",
+    "emptyTitle": "No MCQs yet",
+    "emptyDesc": "Each MCQ is generated with exactly 4 options (A–D) and a single correct answer. Save them to your bank to use in a quiz."
+  },
+  "quizTab": {
+    "newQuiz": "New quiz",
+    "titleLabel": "Title",
+    "titlePlaceholder": "e.g. Physics Mid-term Quiz",
+    "descriptionLabel": "Description (optional)",
+    "pickHeader": "Pick MCQs from your bank",
+    "selectedBadge": "{{count}} selected",
+    "createQuiz": "Create quiz",
+    "emptyBankTitle": "No MCQs in your bank",
+    "emptyBankDesc": "Save MCQs from the MCQ tab first, then come back to assemble them into a quiz.",
+    "yourQuizzes": "Your quizzes",
+    "noQuizzes": "No quizzes yet.",
+    "questionsCount": "{{count}} questions",
+    "answerLabel": "Answer: {{letter}} · {{marks}}m"
+  },
+  "bank": {
+    "header": "Your question bank",
+    "savedBadge": "{{count}} saved",
+    "qaLabel": "Q&A",
+    "mcqLabel": "MCQ",
+    "answerBadge": "Ans: {{letter}}"
+  },
+  "toasts": {
+    "pleaseEnterTopic": "Please enter a topic.",
+    "couldntReadFile": "Couldn't read that file",
+    "generatedQuestions": "Generated {{count}} questions",
+    "generationFailed": "Generation failed",
+    "tryAgain": "Please try again.",
+    "savedToBank": "Saved to your question bank",
+    "couldntSave": "Couldn't save",
+    "questionRegenerated": "Question regenerated",
+    "couldntRegenerate": "Couldn't regenerate",
+    "generatedMcqs": "Generated {{count}} MCQs",
+    "savedToMcqBank": "Saved to MCQ bank",
+    "addedToMcqBank": "Added to MCQ bank",
+    "openQuizHint": "Open the Quiz tab to add it to a quiz.",
+    "mcqRegenerated": "MCQ regenerated",
+    "quizTitleRequired": "Please enter a quiz title.",
+    "pickAtLeastOne": "Pick at least one MCQ.",
+    "quizCreated": "Quiz created",
+    "quizCreatedDesc": "{{title}} is ready.",
+    "couldntCreateQuiz": "Couldn't create quiz",
+    "couldntOpenQuiz": "Couldn't open quiz",
+    "couldntDelete": "Couldn't delete"
+  }
+}

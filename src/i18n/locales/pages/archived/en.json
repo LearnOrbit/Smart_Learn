@@ -1,0 +1,52 @@
+{
+  "header": {
+    "title": "Archived Classes",
+    "description": "Classes you've archived. Restore them anytime, or delete permanently."
+  },
+  "stats": {
+    "archivedTitle": "Archived",
+    "archivedDesc": "Total archived",
+    "subjectsTitle": "Subjects",
+    "subjectsDesc": "Unique subjects",
+    "teachersTitle": "Teachers",
+    "teachersDesc": "Instructors"
+  },
+  "search": {
+    "placeholder": "Search archived classes…",
+    "countOf": "{{filtered}} of {{total}}"
+  },
+  "card": {
+    "archived": "Archived",
+    "section": "Section {{section}}",
+    "restore": "Restore",
+    "format": {
+      "archived": "Archived",
+      "archivedToday": "Archived today",
+      "archivedYesterday": "Archived yesterday",
+      "archivedDaysAgo": "Archived {{count}} days ago",
+      "archivedOn": "Archived {{date}}"
+    }
+  },
+  "empty": {
+    "noClassesTitle": "No archived classes",
+    "noClassesDesc": "Classes you archive will appear here. Archived classes are hidden from your main view but can be restored anytime.",
+    "noMatchesTitle": "No matches",
+    "noMatchesDesc": "Nothing matches \"{{query}}\"."
+  },
+  "delete": {
+    "confirmTitle": "Delete class permanently?",
+    "confirmDesc": "This will permanently remove {{name}} along with all join requests and enrollments. This action cannot be undone.",
+    "cancel": "Cancel",
+    "delete": "Delete"
+  },
+  "tip": {
+    "label": "Tip:",
+    "text": "Restoring a class brings it back to your active classes with all its materials and enrollments intact. Permanent deletion is only available to teachers."
+  },
+  "toasts": {
+    "classRestored": "Class restored",
+    "classRestoredDesc": "{{name}} is back in your active classes.",
+    "classDeleted": "Class deleted",
+    "classDeletedDesc": "{{name}} was permanently removed."
+  }
+}

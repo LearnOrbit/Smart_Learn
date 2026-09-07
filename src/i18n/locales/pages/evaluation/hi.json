@@ -1,0 +1,57 @@
+{
+  "header": {
+    "title": "मूल्यांकन समीक्षा",
+    "description": "सबमिशन पर AI मूल्यांकन चलाएँ और स्कोर की समीक्षा करें"
+  },
+  "selects": {
+    "assignmentLabel": "असाइनमेंट",
+    "assignmentPlaceholder": "असाइनमेंट चुनें...",
+    "noAssignments": "कोई असाइनमेंट नहीं मिला",
+    "submissionLabel": "सबमिशन",
+    "submissionPlaceholder": "सबमिशन चुनें...",
+    "loading": "लोड हो रहा है...",
+    "noSubmissions": "अभी तक कोई सबमिशन नहीं",
+    "ungraded": "अनग्रेडेड",
+    "studentFallback": "छात्र"
+  },
+  "modelSolutions": {
+    "title": "मॉडल सॉल्यूशन",
+    "description": "PDF अपलोड करें या इस असाइनमेंट के मौजूदा मॉडल सॉल्यूशन देखें",
+    "uploading": "अपलोड हो रहा है...",
+    "uploadPdf": "PDF सॉल्यूशन अपलोड करें",
+    "solutionsCount_one": "{{count}} सॉल्यूशन",
+    "solutionsCount_other": "{{count}} सॉल्यूशन",
+    "solutionNumber": "सॉल्यूशन {{n}}:",
+    "fileBased": "(फ़ाइल-आधारित)"
+  },
+  "studentAnswer": {
+    "title": "छात्र का उत्तर",
+    "noContent": "कोई टेक्स्ट सामग्री नहीं",
+    "currentMarks": "वर्तमान अंक: {{marks}}",
+    "currentMarksEmpty": "वर्तमान अंक: —",
+    "evaluating": "मूल्यांकन हो रहा है...",
+    "runEvaluation": "AI मूल्यांकन चलाएँ",
+    "similarity": "समानता: {{pct}}%"
+  },
+  "evaluations": {
+    "title": "प्रति-प्रश्न स्कोर",
+    "loading": "लोड हो रहा है...",
+    "empty": "अभी तक कोई मूल्यांकन नहीं। शुरू करने के लिए \"AI मूल्यांकन चलाएँ\" पर क्लिक करें।",
+    "overridden": "ओवरराइड किया गया",
+    "questionLabel": "प्रश्न {{n}}",
+    "overrideLabel": "ओवरराइड",
+    "scorePlaceholder": "स्कोर",
+    "feedbackLabel": "प्रतिक्रिया",
+    "feedbackPlaceholder": "वैकल्पिक प्रतिक्रिया",
+    "save": "सहेजें"
+  },
+  "toasts": {
+    "solutionUploaded": "मॉडल सॉल्यूशन अपलोड किया गया!",
+    "solutionUploadFailed": "अपलोड विफल",
+    "evaluationComplete": "मूल्यांकन पूरा",
+    "evaluationCompleteDesc": "कुल स्कोर: {{score}}/{{max}}",
+    "evaluationFailed": "मूल्यांकन विफल",
+    "overrideSaved": "ओवरराइड सहेजा गया!",
+    "overrideFailed": "ओवरराइड विफल"
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "header": {
+    "dashboard": "Dashboard",
+    "getStarted": "Get Started"
+  },
+  "hero": {
+    "badge": "Next-gen Academic Management Platform",
+    "titlePrefix": "Academic Management,",
+    "titleHighlight": "Simplified",
+    "description": "Create assignments, submit work, track progress, and leverage AI — all in one clean, focused platform built for teachers and students who care about education.",
+    "cta": "Start Free Today",
+    "ctaSignedIn": "Go to Dashboard",
+    "explore": "Explore Features"
+  },
+  "stats": {
+    "students": "Active Students",
+    "educators": "Educators",
+    "satisfaction": "Satisfaction",
+    "support": "Support"
+  },
+  "features": {
+    "badge": "Powerful Features",
+    "titlePrefix": "Everything you need to",
+    "titleHighlight": "teach better",
+    "subtitle": "Built with the latest in education technology. Every feature designed to save you time and improve outcomes.",
+    "learnMore": "Learn more",
+    "smartAssignments": {
+      "title": "Smart Assignments",
+      "desc": "Create, distribute, and grade assignments with intelligent automation."
+    },
+    "analytics": {
+      "title": "Real-time Analytics",
+      "desc": "Track student progress and performance with live, interactive dashboards."
+    },
+    "aiAssistant": {
+      "title": "AI Teaching Assistant",
+      "desc": "NotebookLM-powered assistant that grounds answers in your course material."
+    },
+    "roleBased": {
+      "title": "Role-Based Workflows",
+      "desc": "Tailored experiences for teachers and students with personalized views."
+    },
+    "copoMapping": {
+      "title": "CO/PO Mapping",
+      "desc": "Outcome-based education with comprehensive curriculum mapping tools."
+    },
+    "secure": {
+      "title": "Secure & Private",
+      "desc": "Enterprise-grade security with role-based access control and encryption."
+    }
+  },
+  "benefits": {
+    "noFees": "No setup fees or hidden costs",
+    "freeTrial": "Free 14-day trial, no credit card required",
+    "security": "Bank-grade security & GDPR compliant",
+    "support": "24/7 customer support"
+  },
+  "cta": {
+    "title": "Ready to transform your classroom?",
+    "subtitle": "Join thousands of educators who are already using AcademiQ to make teaching easier and learning better.",
+    "getStarted": "Get Started Free",
+    "signIn": "Sign In"
+  },
+  "footer": {
+    "tagline": "· Academic Management, Simplified",
+    "copyright": "© 2026 AcademiQ. All rights reserved."
+  }
+}

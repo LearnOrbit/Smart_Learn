@@ -3,7 +3,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+# Load backend/.env before anything else reads os.environ. python-dotenv
+# is already in requirements.txt; we just never called it. Without this,
+# GEMINI_API_KEY (and any other server-side env var) is silently None and
+# the AI provider returns "GEMINI_API_KEY is not configured on the server."
+# `override=False` means real shell env vars still win, which is what you
+# want in production.
+import os as _os
+from dotenv import load_dotenv
+_ENV_PATH = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), ".env")
+load_dotenv(_ENV_PATH, override=False)
 from database import engine, get_db, Base, Subject, ProgramOutcome, CourseOutcome, LearningOutcome, User, SessionLocal, StudentPerformance, Assignment as DBAssignment, AssignmentLOMapping, Submission as DBSubmission, COPOMappingActive, Question as DBQuestion, ModelSolution as DBModelSolution, QuestionEvaluation as DBQuestionEvaluation, Announcement, PastPaperQuestion
+# Registers the Classroom & ClassroomMember models on `Base` so that the
+# startup `Base.metadata.create_all` below also creates the new tables.
+import database_classroom  # noqa: F401
 from models import (
     Student, Course,
     COPOMapping, Assessment, Submission, Result,
@@ -215,6 +228,16 @@ def get_current_user_optional(authorization: Optional[str] = Header(None), db: S
         }
     except:
         return None
+
+# ── Classroom API (teacher creates, student joins by code) ───────────────
+# Register routers after get_current_user exists because their dependency
+# shims resolve this function while the router modules are imported.
+from classroom_api import router as classroom_router  # noqa: E402
+app.include_router(classroom_router, prefix="/api")
+
+# ── AI Assessment Generator (teacher-only; uses server-side GEMINI_API_KEY) ─
+from ai_generator_routes import router as ai_generator_router  # noqa: E402
+app.include_router(ai_generator_router, prefix="/api")
 
 # ============= AUTHENTICATION ENDPOINTS =============
 

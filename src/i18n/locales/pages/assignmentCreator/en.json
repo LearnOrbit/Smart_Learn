@@ -1,0 +1,127 @@
+{
+  "title": "Create Assignment",
+  "description": "Design, generate and distribute assignments to your students",
+  "details": {
+    "cardTitle": "Assignment Details",
+    "titleLabel": "Title",
+    "titlePlaceholder": "e.g. Unit 1 Practice Problems",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Briefly describe what students should do...",
+    "dueDateLabel": "Due Date",
+    "subjectLabel": "Subject"
+  },
+  "classroom": {
+    "label": "Send to Classroom",
+    "hint": "Pick a classroom to share this assignment with enrolled students.",
+    "placeholder": "Select classroom...",
+    "none": "No classroom (save privately)",
+    "willBeVisible": "Will be visible to students in",
+    "emptyHint": "Select a classroom to make this assignment visible to students"
+  },
+  "pastPapers": {
+    "title": "Past Papers Reference Pool",
+    "available_one": "{{count}} question available",
+    "available_other": "{{count}} questions available",
+    "upload": "Upload PDF",
+    "uploading": "Uploading...",
+    "clear": "Clear Pool",
+    "blendHint": "About 40% of generated questions will be blended from this pool."
+  },
+  "courseOutcomes": {
+    "label": "Course Outcomes",
+    "noCos": "No COs defined yet. Add them in the Outcomes page.",
+    "selected_one": "{{count}} CO selected",
+    "selected_other": "{{count}} COs selected"
+  },
+  "summary": {
+    "title": "Summary",
+    "questions": "Questions",
+    "totalMarks": "Total Marks",
+    "losLinked": "LOs linked",
+    "classroom": "Classroom"
+  },
+  "actions": {
+    "preview": "Preview Assignment",
+    "hidePreview": "Hide Preview",
+    "saveDraft": "Save Draft",
+    "sendToStudents": "Send to Students"
+  },
+  "hints": {
+    "needTitle": "Add a title to enable submission",
+    "needQuestions": "Generate or add questions first",
+    "noClassroom": "No classroom selected — students won't see this"
+  },
+  "generation": {
+    "title": "Question Generation",
+    "description": "Build questions from course outcomes, a syllabus snippet, or write them yourself.",
+    "tabs": {
+      "co": "CO-Based",
+      "syllabus": "Syllabus",
+      "manual": "Manual"
+    },
+    "coTab": {
+      "selectLabel": "Select Course Outcomes",
+      "noCosHint": "No COs defined for this subject yet.",
+      "numQuestions": "Number of Questions",
+      "marksPerQuestion": "Marks per Question",
+      "difficulty": "Difficulty",
+      "difficulty_easy": "Easy",
+      "difficulty_medium": "Medium",
+      "difficulty_hard": "Hard",
+      "generate": "Generate from COs",
+      "generating": "Generating..."
+    },
+    "syllabusTab": {
+      "textLabel": "Syllabus Text",
+      "placeholder": "Paste syllabus text here...",
+      "numQuestions": "Number of Questions",
+      "marksPerQuestion": "Marks per Question",
+      "difficulty": "Difficulty",
+      "difficulty_easy": "Easy",
+      "difficulty_medium": "Medium",
+      "difficulty_hard": "Hard",
+      "generate": "Generate from Syllabus",
+      "generating": "Generating..."
+    },
+    "manualTab": {
+      "description": "Write your own questions and configure marks manually.",
+      "addQuestion": "Add Question"
+    }
+  },
+  "preview": {
+    "cardTitle": "Assignment Preview",
+    "pendingApproval": "Pending Approval",
+    "untitled": "Untitled Assignment",
+    "editQuestions": "Edit Questions",
+    "approveAndSend": "Approve & Send to Students"
+  },
+  "questions": {
+    "header": "Questions ({{count}}) — {{marks}} marks",
+    "uploadSolution": "Upload Solution PDF",
+    "extracting": "Extracting...",
+    "modelAnswer": "Model Answer & Rubric",
+    "filled": "filled",
+    "modelAnswerLabel": "Model Answer",
+    "rubricLabel": "Rubric / Marking Criteria",
+    "expectedPlaceholder": "Expected correct answer",
+    "rubricPlaceholder": "e.g. 2 marks for definition, 1 for example...",
+    "noText": "No question text"
+  },
+  "toasts": {
+    "questionsGenerated": "{{count}} questions generated!",
+    "generationFailed": "Question generation failed",
+    "pastPaperUploaded": "Past paper uploaded",
+    "uploadFailed": "Upload failed",
+    "pastPapersCleared": "Past papers cleared",
+    "clearFailed": "Could not clear pool",
+    "textExtracted": "Text extracted from PDF",
+    "extractionFailed": "Extraction failed",
+    "solutionExtracted": "Solution PDF extracted",
+    "distributed": "Distributed across questions",
+    "addQuestionsFirst": "Add at least one question first",
+    "assignmentSent": "Assignment sent",
+    "studentsCanSee": "Students can now see this assignment",
+    "draftSaved": "Draft saved",
+    "error": "Something went wrong"
+  }
+}

@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { apiClient } from "@/integrations/api/client";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -8,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
+import { loadPageNamespace } from "@/i18n";
 import { Download, FileBarChart, Target, BookMarked, AlertTriangle, CheckCircle2, Users } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -21,15 +23,20 @@ interface POReport { po_id: string; po_code: string; po_description: string; wei
 const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#06b6d4", "#84cc16"];
 const API_BASE = import.meta.env.VITE_API_URL?.replace(/\/api$/, "") || "http://localhost:8000";
 
-function getAttainmentLevel(score: number) {
-  if (score >= 70) return { label: "High", color: "text-green-600", icon: CheckCircle2 };
-  if (score >= 40) return { label: "Moderate", color: "text-yellow-600", icon: AlertTriangle };
-  return { label: "Low", color: "text-red-600", icon: AlertTriangle };
+function getAttainmentLevel(score: number, t: (key: string) => string) {
+  if (score >= 70) return { label: t("reports:attainment.high"), color: "text-green-600", icon: CheckCircle2 };
+  if (score >= 40) return { label: t("reports:attainment.moderate"), color: "text-yellow-600", icon: AlertTriangle };
+  return { label: t("reports:attainment.low"), color: "text-red-600", icon: AlertTriangle };
 }
 
 export default function Reports() {
   const { role } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation("pages");
+
+  useEffect(() => {
+    void loadPageNamespace("reports");
+  }, []);
 
   const { data: realCoReport = [], isLoading: coLoading } = useQuery<COReport[]>({
     queryKey: ["report_co_attainment"],
@@ -55,10 +62,10 @@ export default function Reports() {
   const coReport = React.useMemo(() => {
     if (realCoReport.length === 0) {
       return [
-        { co_id: "demo1", co_code: "CO1", co_description: "Understand fundamentals and core principles.", avg_score: 75, student_count: 32, lo_count: 3 },
-        { co_id: "demo2", co_code: "CO2", co_description: "Analyze complex problems using learned algorithms.", avg_score: 65, student_count: 32, lo_count: 4 },
-        { co_id: "demo3", co_code: "CO3", co_description: "Evaluate constraints and design tradeoffs.", avg_score: 45, student_count: 32, lo_count: 2 },
-        { co_id: "demo4", co_code: "CO4", co_description: "Design efficient system architectures.", avg_score: 82, student_count: 32, lo_count: 5 },
+        { co_id: "demo1", co_code: "CO1", co_description: t("reports:demo.co1"), avg_score: 75, student_count: 32, lo_count: 3 },
+        { co_id: "demo2", co_code: "CO2", co_description: t("reports:demo.co2"), avg_score: 65, student_count: 32, lo_count: 4 },
+        { co_id: "demo3", co_code: "CO3", co_description: t("reports:demo.co3"), avg_score: 45, student_count: 32, lo_count: 2 },
+        { co_id: "demo4", co_code: "CO4", co_description: t("reports:demo.co4"), avg_score: 82, student_count: 32, lo_count: 5 },
       ];
     }
     // If we have actual COs but no one has been graded yet, assume some scores for the demo.
@@ -72,10 +79,10 @@ export default function Reports() {
   const poReport = React.useMemo(() => {
     if (realPoReport.length === 0) {
       return [
-        { po_id: "p1", po_code: "PO1", po_description: "Engineering Knowledge", weighted_avg_score: 72, co_count: 4 },
-        { po_id: "p2", po_code: "PO2", po_description: "Problem Analysis", weighted_avg_score: 68, co_count: 3 },
-        { po_id: "p3", po_code: "PO3", po_description: "Design/Development of Solutions", weighted_avg_score: 85, co_count: 2 },
-        { po_id: "p4", po_code: "PO4", po_description: "Modern Tool Usage", weighted_avg_score: 55, co_count: 1 },
+        { po_id: "p1", po_code: "PO1", po_description: t("reports:demo.po1"), weighted_avg_score: 72, co_count: 4 },
+        { po_id: "p2", po_code: "PO2", po_description: t("reports:demo.po2"), weighted_avg_score: 68, co_count: 3 },
+        { po_id: "p3", po_code: "PO3", po_description: t("reports:demo.po3"), weighted_avg_score: 85, co_count: 2 },
+        { po_id: "p4", po_code: "PO4", po_description: t("reports:demo.po4"), weighted_avg_score: 55, co_count: 1 },
       ];
     }
     if (realPoReport.every(r => r.weighted_avg_score === 0)) {
@@ -99,16 +106,16 @@ export default function Reports() {
       a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
-      toast({ title: `Downloaded ${filename}` });
+      toast({ title: t("reports:toasts.downloaded", { name: filename }) });
     } catch {
-      toast({ title: "Download failed", variant: "destructive" });
+      toast({ title: t("reports:toasts.downloadFailed"), variant: "destructive" });
     }
   };
 
   if (role !== "teacher") {
     return (
       <DashboardLayout>
-        <Card><CardContent className="py-8 text-center text-muted-foreground">Reports are available to teachers only.</CardContent></Card>
+        <Card><CardContent className="py-8 text-center text-muted-foreground">{t("reports:notTeacher")}</CardContent></Card>
       </DashboardLayout>
     );
   }
@@ -121,9 +128,9 @@ export default function Reports() {
   const modCount = coReport.filter((r) => r.avg_score >= 40 && r.avg_score < 70).length;
   const lowCount = coReport.filter((r) => r.avg_score < 40).length;
   const pieData = [
-    { name: "High (≥70)", value: highCount },
-    { name: "Moderate (40-70)", value: modCount },
-    { name: "Low (<40)", value: lowCount },
+    { name: t("reports:coDistribution.high"), value: highCount },
+    { name: t("reports:coDistribution.moderate"), value: modCount },
+    { name: t("reports:coDistribution.low"), value: lowCount },
   ].filter((d) => d.value > 0);
   const pieColors = ["#10b981", "#f59e0b", "#ef4444"];
 
@@ -132,18 +139,18 @@ export default function Reports() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold" style={{ fontFamily: "var(--font-display)" }}>Reports & Analytics</h2>
-            <p className="text-muted-foreground">CO/PO attainment analytics with downloadable reports</p>
+            <h2 className="text-2xl font-bold" style={{ fontFamily: "var(--font-display)" }}>{t("reports:header.title")}</h2>
+            <p className="text-muted-foreground">{t("reports:header.description")}</p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => downloadCSV("/reports/co-attainment-csv", "co_attainment.csv")}>
-              <Download className="h-4 w-4 mr-1" />CO CSV
+              <Download className="h-4 w-4 mr-1" />{t("reports:header.coCsv")}
             </Button>
             <Button variant="outline" size="sm" onClick={() => downloadCSV("/reports/po-attainment-csv", "po_attainment.csv")}>
-              <Download className="h-4 w-4 mr-1" />PO CSV
+              <Download className="h-4 w-4 mr-1" />{t("reports:header.poCsv")}
             </Button>
             <Button variant="outline" size="sm" onClick={() => downloadCSV("/reports/student-performance-csv", "student_performance.csv")}>
-              <Download className="h-4 w-4 mr-1" />Students CSV
+              <Download className="h-4 w-4 mr-1" />{t("reports:header.studentsCsv")}
             </Button>
           </div>
         </div>
@@ -156,7 +163,7 @@ export default function Reports() {
                 <BookMarked className="h-8 w-8 text-blue-500" />
                 <div>
                   <p className="text-2xl font-bold">{coReport.length}</p>
-                  <p className="text-xs text-muted-foreground">Course Outcomes</p>
+                  <p className="text-xs text-muted-foreground">{t("reports:summary.courseOutcomes")}</p>
                 </div>
               </div>
             </CardContent>
@@ -167,7 +174,7 @@ export default function Reports() {
                 <Target className="h-8 w-8 text-purple-500" />
                 <div>
                   <p className="text-2xl font-bold">{poReport.length}</p>
-                  <p className="text-xs text-muted-foreground">Program Outcomes</p>
+                  <p className="text-xs text-muted-foreground">{t("reports:summary.programOutcomes")}</p>
                 </div>
               </div>
             </CardContent>
@@ -178,7 +185,7 @@ export default function Reports() {
                 <CheckCircle2 className="h-8 w-8 text-green-500" />
                 <div>
                   <p className="text-2xl font-bold">{highCount}</p>
-                  <p className="text-xs text-muted-foreground">COs Attained (≥70)</p>
+                  <p className="text-xs text-muted-foreground">{t("reports:summary.attained")}</p>
                 </div>
               </div>
             </CardContent>
@@ -189,7 +196,7 @@ export default function Reports() {
                 <AlertTriangle className="h-8 w-8 text-red-500" />
                 <div>
                   <p className="text-2xl font-bold">{lowCount}</p>
-                  <p className="text-xs text-muted-foreground">COs At Risk (&lt;40)</p>
+                  <p className="text-xs text-muted-foreground">{t("reports:summary.atRisk")}</p>
                 </div>
               </div>
             </CardContent>
@@ -199,12 +206,12 @@ export default function Reports() {
         {/* CO Attainment Bar Chart */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2"><BookMarked className="h-4 w-4" /> CO Attainment</CardTitle>
-            <CardDescription>Average score (0-100) across all students per Course Outcome</CardDescription>
+            <CardTitle className="text-base flex items-center gap-2"><BookMarked className="h-4 w-4" /> {t("reports:coChart.title")}</CardTitle>
+            <CardDescription>{t("reports:coChart.description")}</CardDescription>
           </CardHeader>
           <CardContent>
-            {coLoading ? <p className="text-muted-foreground">Loading...</p> : coChartData.length === 0 ? (
-              <p className="text-center py-8 text-muted-foreground">No CO data yet. Grade submissions to see attainment.</p>
+            {coLoading ? <p className="text-muted-foreground">{t("reports:coChart.loading")}</p> : coChartData.length === 0 ? (
+              <p className="text-center py-8 text-muted-foreground">{t("reports:coChart.empty")}</p>
             ) : (
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={coChartData}>
@@ -227,12 +234,12 @@ export default function Reports() {
           {/* PO Radar Chart */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2"><Target className="h-4 w-4" /> PO Attainment Radar</CardTitle>
-              <CardDescription>Weighted average (using CO-PO correlations)</CardDescription>
+              <CardTitle className="text-base flex items-center gap-2"><Target className="h-4 w-4" /> {t("reports:poRadar.title")}</CardTitle>
+              <CardDescription>{t("reports:poRadar.description")}</CardDescription>
             </CardHeader>
             <CardContent>
-              {poLoading ? <p className="text-muted-foreground">Loading...</p> : poChartData.length === 0 ? (
-                <p className="text-center py-8 text-muted-foreground">No PO data yet.</p>
+              {poLoading ? <p className="text-muted-foreground">{t("reports:poRadar.loading")}</p> : poChartData.length === 0 ? (
+                <p className="text-center py-8 text-muted-foreground">{t("reports:poRadar.empty")}</p>
               ) : (
                 <ResponsiveContainer width="100%" height={300}>
                   <RadarChart data={poChartData}>
@@ -249,12 +256,12 @@ export default function Reports() {
           {/* CO Distribution Pie */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2"><FileBarChart className="h-4 w-4" /> CO Distribution</CardTitle>
-              <CardDescription>How many COs are High / Moderate / Low</CardDescription>
+              <CardTitle className="text-base flex items-center gap-2"><FileBarChart className="h-4 w-4" /> {t("reports:coDistribution.title")}</CardTitle>
+              <CardDescription>{t("reports:coDistribution.description")}</CardDescription>
             </CardHeader>
             <CardContent>
               {pieData.length === 0 ? (
-                <p className="text-center py-8 text-muted-foreground">No data yet.</p>
+                <p className="text-center py-8 text-muted-foreground">{t("reports:coDistribution.empty")}</p>
               ) : (
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
@@ -275,22 +282,22 @@ export default function Reports() {
         {/* CO Detail Table */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">CO Attainment Details</CardTitle>
+            <CardTitle className="text-base">{t("reports:coTable.title")}</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>CO Code</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="text-center">Avg Score</TableHead>
-                  <TableHead className="text-center">LOs</TableHead>
-                  <TableHead className="text-center">Level</TableHead>
+                  <TableHead>{t("reports:coTable.code")}</TableHead>
+                  <TableHead>{t("reports:coTable.description")}</TableHead>
+                  <TableHead className="text-center">{t("reports:coTable.avgScore")}</TableHead>
+                  <TableHead className="text-center">{t("reports:coTable.los")}</TableHead>
+                  <TableHead className="text-center">{t("reports:coTable.level")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {coReport.map((r) => {
-                  const att = getAttainmentLevel(r.avg_score);
+                  const att = getAttainmentLevel(r.avg_score, t);
                   return (
                     <TableRow key={r.co_id}>
                       <TableCell className="font-semibold">{r.co_code}</TableCell>
@@ -311,22 +318,22 @@ export default function Reports() {
         {/* PO Detail Table */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">PO Attainment Details</CardTitle>
+            <CardTitle className="text-base">{t("reports:poTable.title")}</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>PO Code</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="text-center">Weighted Score</TableHead>
-                  <TableHead className="text-center">COs</TableHead>
-                  <TableHead className="text-center">Level</TableHead>
+                  <TableHead>{t("reports:poTable.code")}</TableHead>
+                  <TableHead>{t("reports:poTable.description")}</TableHead>
+                  <TableHead className="text-center">{t("reports:poTable.weightedScore")}</TableHead>
+                  <TableHead className="text-center">{t("reports:poTable.cos")}</TableHead>
+                  <TableHead className="text-center">{t("reports:poTable.level")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {poReport.map((r) => {
-                  const att = getAttainmentLevel(r.weighted_avg_score);
+                  const att = getAttainmentLevel(r.weighted_avg_score, t);
                   return (
                     <TableRow key={r.po_id}>
                       <TableCell className="font-semibold">{r.po_code}</TableCell>

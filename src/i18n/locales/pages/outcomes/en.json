@@ -1,0 +1,65 @@
+{
+  "title": "Outcomes Manager",
+  "description": "Manage Program Outcomes, Course Outcomes, and Learning Outcomes",
+  "toasts": {
+    "poCreated": "PO created!",
+    "coCreated": "CO created!",
+    "loCreated": "LO created!",
+    "error": "Error",
+    "pdfLoaded": "PDF loaded!",
+    "pdfLoadedDesc": "Now enter the subject name to extract its COs and LOs.",
+    "uploadFailed": "Upload failed",
+    "enterSubjectFirst": "Enter a subject name first",
+    "uploadPdfFirst": "Upload a PDF first",
+    "subjectNotFound": "Subject not found",
+    "subjectNotFoundDesc": "\"{{name}}\" not found in PDF. Try a shorter name.",
+    "nothingToSave": "Nothing to save",
+    "saveFailed": "Save failed",
+    "extractionFailed": "Extraction failed",
+    "posSaved": "POs saved!",
+    "posSavedDesc": "{{count}} Program Outcomes saved permanently."
+  },
+  "po": {
+    "tabTitle": "Program Outcomes",
+    "addPo": "Add PO",
+    "newPo": "New Program Outcome",
+    "code": "Code",
+    "codePlaceholder": "PO1",
+    "description": "Description",
+    "create": "Create"
+  },
+  "co": {
+    "addCo": "Add CO",
+    "newCo": "New Course Outcome",
+    "code": "Code",
+    "codePlaceholder": "CO1",
+    "selectPo": "Select PO",
+    "none": "None",
+    "description": "Description",
+    "create": "Create CO"
+  },
+  "lo": {
+    "addLo": "Add LO",
+    "newLo": "New Learning Outcome",
+    "code": "Code",
+    "codePlaceholder": "LO1",
+    "linkedCo": "Linked CO",
+    "selectCo": "Select CO",
+    "description": "Description",
+    "create": "Create LO"
+  },
+  "pdf": {
+    "clickToUpload": "Click to upload PDF",
+    "anySyllabus": "Any syllabus or course document",
+    "uploadPoDocument": "Click to upload PO document",
+    "extract": "Extract",
+    "subjectPlaceholder": "Enter subject name (e.g., Data Structures)",
+    "savedOutcomes": "Saved Outcomes",
+    "noSaved": "No outcomes saved yet"
+  },
+  "ui": {
+    "uploadHint": "Upload a PDF and extract a subject above.",
+    "importPoTitle": "Import POs from PDF",
+    "importPoHint": "Extracts lines matching \"PO1: Description\" format."
+  }
+}

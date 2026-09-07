@@ -1022,3 +1022,253 @@ class AnnouncementResponse(BaseModel):
 class AnnouncementsListResponse(BaseModel):
     """List of announcements"""
     announcements: List[AnnouncementResponse]
+
+
+# ============= AI ASSESSMENT GENERATOR SCHEMAS =============
+# These mirror the JSON shapes that the prompts module produces and
+# the route layer returns. The route layer uses them as `response_model`
+# so the OpenAPI docs are accurate and the frontend gets typed JSON.
+
+# Single-item shapes --------------------------------------------------
+
+class AIGeneratedQA(BaseModel):
+    """A single Q&A as returned by the AI (and as stored in AIQuestion)."""
+    question: str
+    answer: str
+    marks: int = Field(..., ge=1, le=100)
+    difficulty: str  # easy|medium|hard
+    bloom_level: Optional[str] = None
+    course_outcome_code: Optional[str] = None
+    source_type: Optional[str] = "topic"  # topic|syllabus|document
+
+
+class AIGeneratedMCQ(BaseModel):
+    """A single MCQ as returned by the AI (and as stored in MCQQuestion)."""
+    question: str
+    option_a: str
+    option_b: str
+    option_c: str
+    option_d: str
+    correct_answer: str  # A|B|C|D
+    explanation: Optional[str] = ""
+    marks: int = Field(default=1, ge=1, le=100)
+    difficulty: str
+    bloom_level: Optional[str] = None
+    course_outcome_code: Optional[str] = None
+    source_type: Optional[str] = "topic"
+
+
+# Request/response envelopes ------------------------------------------
+
+class AIGenerateQaRequest(BaseModel):
+    topic: str = Field(..., min_length=1)
+    co_id: Optional[str] = None
+    co_code: Optional[str] = None
+    co_description: Optional[str] = None
+    difficulty: str = "medium"
+    marks: int = Field(default=5, ge=1, le=100)
+    count: int = Field(default=5, ge=1, le=20)
+    source_type: str = "topic"  # topic|syllabus|document
+    source_text: Optional[str] = None
+    subject_id: Optional[str] = None
+
+
+class AIGenerateQaResponse(BaseModel):
+    questions: List[AIGeneratedQA]
+
+
+class AIGenerateMCQRequest(BaseModel):
+    topic: str = Field(..., min_length=1)
+    co_id: Optional[str] = None
+    co_code: Optional[str] = None
+    co_description: Optional[str] = None
+    difficulty: str = "medium"
+    marks: int = Field(default=1, ge=1, le=100)
+    count: int = Field(default=5, ge=1, le=20)
+    source_type: str = "topic"
+    source_text: Optional[str] = None
+    subject_id: Optional[str] = None
+
+
+class AIGenerateMCQResponse(BaseModel):
+    mcqs: List[AIGeneratedMCQ]
+
+
+class AIRegenerateRequest(BaseModel):
+    kind: str = Field(..., pattern="^(qa|mcq)$")
+    previous: dict
+    instruction: str = Field(..., min_length=1)
+
+
+class AIRegenerateResponse(BaseModel):
+    question: Optional[AIGeneratedQA] = None
+    mcq: Optional[AIGeneratedMCQ] = None
+
+
+# Persisted-row output shapes -----------------------------------------
+
+class AIQuestionOut(BaseModel):
+    id: str
+    question_text: str
+    answer: str
+    marks: int
+    difficulty: str
+    bloom_level: Optional[str] = None
+    course_outcome_code: Optional[str] = None
+    source_type: str
+    source_ref: Optional[str] = None
+    subject_id: Optional[str] = None
+    co_id: Optional[str] = None
+    topic: Optional[str] = None
+    created_at: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class AIMCQOut(BaseModel):
+    id: str
+    question_text: str
+    option_a: str
+    option_b: str
+    option_c: str
+    option_d: str
+    correct_answer: str
+    explanation: str
+    marks: int
+    difficulty: str
+    bloom_level: Optional[str] = None
+    course_outcome_code: Optional[str] = None
+    subject_id: Optional[str] = None
+    co_id: Optional[str] = None
+    topic: Optional[str] = None
+    source: Optional[str] = None
+    created_at: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class AIQuestionListResponse(BaseModel):
+    questions: List[AIQuestionOut]
+
+
+class AIMCQListResponse(BaseModel):
+    mcqs: List[AIMCQOut]
+
+
+# Save / delete envelopes ---------------------------------------------
+
+class AIQuestionSaveRequest(BaseModel):
+    """Payload to persist a single Q&A. The model layer fills in
+    `created_by` and `created_at`; the frontend sends the rest."""
+    question_text: str = Field(..., min_length=1)
+    answer: str = Field(..., min_length=1)
+    marks: int = Field(default=5, ge=1, le=100)
+    difficulty: str = "medium"
+    bloom_level: Optional[str] = None
+    course_outcome_code: Optional[str] = None
+    source_type: str = "topic"
+    source_ref: Optional[str] = None
+    subject_id: Optional[str] = None
+    co_id: Optional[str] = None
+    topic: Optional[str] = None
+
+
+class MCQSaveRequest(BaseModel):
+    question_text: str = Field(..., min_length=1)
+    option_a: str = Field(..., min_length=1)
+    option_b: str = Field(..., min_length=1)
+    option_c: str = Field(..., min_length=1)
+    option_d: str = Field(..., min_length=1)
+    correct_answer: str = Field(..., pattern="^[ABCD]$")
+    explanation: str = ""
+    marks: int = Field(default=1, ge=1, le=100)
+    difficulty: str = "medium"
+    bloom_level: Optional[str] = None
+    course_outcome_code: Optional[str] = None
+    subject_id: Optional[str] = None
+    co_id: Optional[str] = None
+    topic: Optional[str] = None
+    source: Optional[str] = "ai"
+
+
+# Quiz ----------------------------------------------------------------
+
+class QuizCreateRequest(BaseModel):
+    title: str = Field(..., min_length=1)
+    description: Optional[str] = ""
+    mcq_ids: List[str] = Field(..., min_length=1)
+
+
+class QuizMCQOut(BaseModel):
+    id: str
+    question: str
+    option_a: str
+    option_b: str
+    option_c: str
+    option_d: str
+    correct_answer: str
+    explanation: str
+    marks: int
+    difficulty: str
+    bloom_level: Optional[str] = None
+    course_outcome_code: Optional[str] = None
+
+
+class QuizQuestionOut(BaseModel):
+    position: int
+    mcq: QuizMCQOut
+
+
+class QuizOut(BaseModel):
+    id: str
+    title: str
+    description: str
+    created_by: str
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+    questions: List[QuizQuestionOut] = []
+
+
+class QuizListResponse(BaseModel):
+    quizzes: List[QuizOut]
+
+
+# Misc helpers --------------------------------------------------------
+
+class ExtractSourceResponse(BaseModel):
+    """Returned by /api/ai/extract-source after OCR / PDF text extract.
+
+    The route layer reuses the existing /api/extract-text/pdf and
+    /api/extract-text/image endpoints internally; this is just a
+    convenience for the AI generator page so the UI doesn't have to
+    branch on file type.
+    """
+    text: str
+    pages: Optional[int] = None
+    file_name: Optional[str] = None
+
+
+# ============= quick-quiz (student + teacher) ==============================
+
+
+class QuickQuizRequest(BaseModel):
+    """Request body for /api/ai/quick-quiz.
+
+    Open to BOTH students and teachers — the route does NOT gate on
+    role. No DB write; the response is ephemeral and the quiz lives
+    only in the browser tab.
+
+    Caps are intentionally smaller than the full AI generator:
+      - topic length 1..200 (the full generator has no explicit cap)
+      - count 1..15 (the full generator allows up to 20)
+    Difficulty is constrained to the three known levels so the
+    prompt layer doesn't have to validate.
+    """
+    topic: str = Field(..., min_length=1, max_length=200)
+    count: int = Field(default=5, ge=1, le=15)
+    difficulty: str = Field(default="medium", pattern="^(easy|medium|hard)$")
+    co_code: Optional[str] = None
+    co_description: Optional[str] = None
+    subject_id: Optional[str] = None

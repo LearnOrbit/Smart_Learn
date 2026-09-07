@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { motion, AnimatePresence } from "framer-motion";
 import { apiClient } from "@/integrations/api/client";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -12,12 +13,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Plus, Calendar, FileText, Users, Lightbulb, Trash2, MoreVertical,
-  Copy, UserCheck, Check, X, Megaphone, Pin, Send, ChevronRight,
-  BookOpen, ClipboardList, AlertCircle, Clock,
+  Plus, FileText, Users, Trash2, MoreVertical,
+  Copy, UserCheck, Check, X, Megaphone, Pin, Send,
+  BookOpen, ClipboardList, AlertCircle, Clock, Sparkles,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { PageHeader, SectionHeader, StatCard, StatCardGrid, EmptyState } from "@/components/ui";
+import { useTranslation } from "react-i18next";
+import { loadPageNamespace } from "@/i18n";
 import {
   getClassrooms, createClassroom, deleteClassroom, updateClassroom,
   getJoinRequests, acceptJoinRequest, rejectJoinRequest, getEnrollments,
@@ -56,6 +60,13 @@ export default function TeacherDashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  // `pages` namespace + `teacherDashboard:` prefix → resolves to the
+  // teacher dashboard's per-page bundle. `loaded: Set` inside the
+  // loader makes this idempotent on remount.
+  const { t } = useTranslation("pages");
+  useEffect(() => {
+    void loadPageNamespace("teacherDashboard");
+  }, []);
 
   /* ── Classroom management state ── */
   const [createClassOpen, setCreateClassOpen] = useState(false);
@@ -109,7 +120,7 @@ export default function TeacherDashboard() {
     };
   }, []);
 
-  const teacherName = user?.email?.split("@")[0]?.replace(/\./g, " ") || "Teacher";
+  const teacherName = user?.email?.split("@")[0]?.replace(/\./g, " ") || t("teacherDashboard:defaults.teacher");
 
   /* ── Queries ── */
   const { data: learningOutcomes = [] } = useQuery({
@@ -144,7 +155,6 @@ export default function TeacherDashboard() {
   const { data: announcementsRaw } = useQuery({
     queryKey: ["announcements", user?.id],
     queryFn: async () => {
-      // Try teacher-specific endpoint, fall back to general
       const res = await apiClient.get("/announcements/");
       return res.data?.announcements ?? res.data ?? [];
     },
@@ -172,9 +182,9 @@ export default function TeacherDashboard() {
       setAnnounceTitle("");
       setAnnounceContent("");
       setAnnounceClassroomId(null);
-      toast({ title: "Announcement sent!" });
+      toast({ title: t("teacherDashboard:toasts.announcementSent") });
     },
-    onError: (e: Error) => toast({ title: "Failed to send", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("teacherDashboard:toasts.failedToSend"), description: e.message, variant: "destructive" }),
   });
 
   const gradeMutation = useMutation({
@@ -182,7 +192,7 @@ export default function TeacherDashboard() {
       const { error } = await apiClient.put(`/submissions/${id}`, { marks, grade, feedback });
       if (error) throw error;
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["submissions"] }); toast({ title: "Graded!" }); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["submissions"] }); toast({ title: t("teacherDashboard:toasts.graded") }); },
   });
 
   const deleteMutation = useMutation({
@@ -190,28 +200,36 @@ export default function TeacherDashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["assignments", user?.id] });
       setSelectedAssignment(null);
-      toast({ title: "Assignment deleted" });
+      toast({ title: t("teacherDashboard:toasts.assignmentDeleted") });
     },
-    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("teacherDashboard:toasts.error"), description: e.message, variant: "destructive" }),
   });
 
   /* ── Classroom CRUD ── */
-  const handleCreateClass = () => {
+  const handleCreateClass = async () => {
     if (!newClassName.trim()) return;
     const colorTheme = BANNER_COLORS[Math.floor(Math.random() * BANNER_COLORS.length)];
-    const newClass = createClassroom({
-      name: newClassName,
-      section: newClassSection,
-      subject: newClassSubject,
-      teacherName,
-      bannerColor: colorTheme.bannerColor,
-      cardColor: colorTheme.cardColor,
-    });
-    setCreateClassOpen(false);
-    setNewClassName("");
-    setNewClassSection("");
-    setNewClassSubject("");
-    toast({ title: `Class '${newClass.name}' created! Code: ${newClass.code}` });
+    try {
+      const newClass = await createClassroom({
+        name: newClassName,
+        section: newClassSection,
+        subject: newClassSubject,
+        teacherName,
+        bannerColor: colorTheme.bannerColor,
+        cardColor: colorTheme.cardColor,
+      });
+      setCreateClassOpen(false);
+      setNewClassName("");
+      setNewClassSection("");
+      setNewClassSubject("");
+      toast({ title: t("teacherDashboard:toasts.classCreated", { name: newClass.name, code: newClass.code }) });
+    } catch (e) {
+      toast({
+        title: t("teacherDashboard:toasts.failedToCreateClass"),
+        description: e instanceof Error ? e.message : t("teacherDashboard:createClass.tryAgain"),
+        variant: "destructive",
+      });
+    }
   };
 
   const openEditModal = (cls: Classroom) => {
@@ -226,7 +244,7 @@ export default function TeacherDashboard() {
     if (!editClassName.trim() || !editingClassId) return;
     updateClassroom(editingClassId, { name: editClassName, section: editClassSection, subject: editClassSubject });
     setEditClassOpen(false);
-    toast({ title: "Class updated!" });
+    toast({ title: t("teacherDashboard:toasts.classUpdated") });
   };
 
   const handleUploadMaterial = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -245,9 +263,9 @@ export default function TeacherDashboard() {
         extractedText: (res.data as any)?.text || "",
         filePath: (res.data as any)?.file_path,
       });
-      toast({ title: "Material uploaded!" });
+      toast({ title: t("teacherDashboard:toasts.materialUploaded") });
     } catch (err: any) {
-      toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+      toast({ title: t("teacherDashboard:toasts.uploadFailed"), description: err.message, variant: "destructive" });
     } finally {
       setIsUploadingMaterial(false);
       if (e.target) e.target.value = "";
@@ -271,82 +289,172 @@ export default function TeacherDashboard() {
   /* Last sent announcement (global stream) */
   const lastAnnouncement = allAnnouncements[0];
 
+  const totalStudents = enrollmentsTotal.length;
+  const totalPendingRequests = joinRequests.filter((r) => r.status === "pending").length;
+
   return (
     <DashboardLayout>
-      <div className="gc-page w-full flex flex-col pt-4">
+      <div className="w-full flex flex-col space-y-6">
+        {/* ── Welcome Header ── */}
+        <PageHeader
+          title={t("teacherDashboard:header.title", { name: teacherName.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ") })}
+          description={t("teacherDashboard:header.description")}
+          action={
+            <Button onClick={() => setCreateClassOpen(true)} className="gap-2 shadow-sm">
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">{t("teacherDashboard:header.createClass")}</span>
+            </Button>
+          }
+        />
 
-        {/* ── Top bar ── */}
-        <div className="gc-topbar">
-          <div>
-            <h1 className="gc-greeting">Welcome back, <span className="gc-name">{teacherName}</span> 👋</h1>
-            <p className="gc-sub">Manage your classrooms, assignments and announcements</p>
-          </div>
-          <Button className="gc-join-btn" onClick={() => setCreateClassOpen(true)}>
-            <Plus className="gc-btn-icon" /> Create Class
-          </Button>
-        </div>
+        {/* ── Stats Overview ── */}
+        <StatCardGrid columns={4}>
+          <StatCard
+            title={t("teacherDashboard:stats.totalClasses")}
+            value={classrooms.length}
+            description={t("teacherDashboard:stats.activeClassrooms")}
+            icon={<BookOpen className="h-6 w-6" />}
+            delay={0}
+          />
+          <StatCard
+            title={t("teacherDashboard:stats.studentsEnrolled")}
+            value={totalStudents}
+            description={t("teacherDashboard:stats.acrossAllClasses")}
+            icon={<Users className="h-6 w-6" />}
+            delay={0.1}
+          />
+          <StatCard
+            title={t("teacherDashboard:stats.activeAssignments")}
+            value={publishedAssignments.length}
+            description={t("teacherDashboard:stats.drafts", { count: draftAssignments.length })}
+            icon={<FileText className="h-6 w-6" />}
+            delay={0.2}
+          />
+          <StatCard
+            title={t("teacherDashboard:stats.pendingRequests")}
+            value={totalPendingRequests}
+            description={t("teacherDashboard:stats.awaitingApproval")}
+            icon={<UserCheck className="h-6 w-6" />}
+            delay={0.3}
+          />
+        </StatCardGrid>
 
         {/* ── Class Cards Grid ── */}
+        <SectionHeader
+          title={t("teacherDashboard:classes.sectionTitle")}
+          description={t("teacherDashboard:classes.sectionDescription")}
+          count={classrooms.length}
+          icon={<BookOpen className="h-5 w-5" />}
+        />
+
         {classrooms.length === 0 ? (
-          <Card className="mb-10 border-none shadow-sm">
-            <CardContent className="py-12 flex flex-col items-center">
-              <Users className="h-10 w-10 text-muted-foreground mb-4 opacity-50" />
-              <p className="text-muted-foreground text-sm">No classes created yet.</p>
-            </CardContent>
-          </Card>
+          <EmptyState
+            title={t("teacherDashboard:classes.emptyTitle")}
+            description={t("teacherDashboard:classes.emptyDescription")}
+            icon={<Users className="h-10 w-10" />}
+            action={
+              <Button onClick={() => setCreateClassOpen(true)} className="gap-2">
+                <Plus className="h-4 w-4" />
+                {t("teacherDashboard:classes.emptyAction")}
+              </Button>
+            }
+          />
         ) : (
-          <div className="gc-grid mb-10">
-            {classrooms.map((cls) => {
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+            {classrooms.map((cls, index) => {
               const pendingCount = joinRequests.filter((r) => r.classroomId === cls.id && r.status === "pending").length;
               const assignmentCount = assignments.filter((a) => a.classroom_id === cls.id).length;
               return (
-                <div
+                <motion.div
                   key={cls.id}
-                  className="gc-card"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: index * 0.05 }}
+                  whileHover={{ y: -4, boxShadow: "var(--shadow-xl)" }}
                   onClick={() => { setSelectedClassForDetail(cls); setClassDetailOpen(true); setActiveClassTab("announcements"); }}
+                  className="group rounded-xl overflow-hidden shadow-sm border border-border bg-card cursor-pointer transition-all duration-200"
                 >
-                  <div className="gc-card-banner" style={{ backgroundColor: cls.bannerColor }}>
-                    <div className="gc-card-banner-content">
-                      <h2 className="gc-card-name">{cls.name}</h2>
-                      {cls.section && <p className="gc-card-section">{cls.section}</p>}
-                      <p className="gc-card-teacher">{cls.subject}</p>
+                  {/* Banner */}
+                  <div
+                    className="relative h-24 px-5 pt-4 pb-3 flex flex-col justify-end overflow-hidden"
+                    style={{ backgroundColor: cls.bannerColor }}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-tr from-black/30 to-transparent" />
+                    <div
+                      className="absolute -right-8 -top-8 w-32 h-32 rounded-full opacity-20"
+                      style={{ background: "radial-gradient(circle, rgba(255,255,255,0.4) 0%, transparent 70%)" }}
+                    />
+                    <div className="relative z-10 text-white">
+                      <h3 className="text-base font-bold leading-tight line-clamp-2">
+                        {cls.name}
+                      </h3>
+                      {cls.section && (
+                        <p className="text-xs text-white/80 mt-0.5">{cls.section}</p>
+                      )}
                     </div>
-                    <div className="gc-card-menu" onClick={(e) => e.stopPropagation()}>
+                    <div
+                      className="absolute top-3 right-3 z-20"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <button className="gc-more-btn"><MoreVertical className="h-5 w-5" /></button>
+                          <button className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center text-white hover:bg-white/30 transition-colors">
+                            <MoreVertical className="h-4 w-4" />
+                          </button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="gc-dropdown">
-                          <DropdownMenuItem className="gc-dd-item" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(cls.code); toast({ title: "Code copied!" }); }}>
-                            <Copy className="h-4 w-4" /> Copy Code
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(cls.code); toast({ title: t("teacherDashboard:toasts.codeCopied") }); }}>
+                            <Copy className="h-4 w-4 mr-2" /> {t("teacherDashboard:classActions.copyCode")}
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="gc-dd-item" onClick={(e) => { e.stopPropagation(); openEditModal(cls); }}>
-                            <FileText className="h-4 w-4" /> Edit Details
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEditModal(cls); }}>
+                            <FileText className="h-4 w-4 mr-2" /> {t("teacherDashboard:classActions.editDetails")}
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="gc-dd-item text-destructive hover:bg-destructive/10" onClick={(e) => { e.stopPropagation(); if (confirm(`Delete class ${cls.name}?`)) deleteClassroom(cls.id); }}>
-                            <Trash2 className="h-4 w-4" /> Delete
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              if (confirm(t("teacherDashboard:toasts.classDeleteFailed", { name: cls.name }))) {
+                                try { await deleteClassroom(cls.id); } catch {}
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" /> {t("teacherDashboard:classActions.delete")}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
-                    <div className="gc-teacher-avatar"><span>{getInitials(cls.teacherName)}</span></div>
                   </div>
-                  <div className="gc-card-body pb-4">
-                    <div className="flex items-center justify-between mt-2">
-                      <p className="text-sm font-mono bg-muted px-2 py-1 rounded border">Code: <strong>{cls.code}</strong></p>
-                      <div className="flex items-center gap-3">
+
+                  {/* Card body */}
+                  <div className="relative p-4 pt-8">
+                    {/* Avatar overlap */}
+                    <div className="absolute -top-6 left-4 h-12 w-12 rounded-full bg-card flex items-center justify-center font-bold text-sm text-foreground shadow-md border-2 border-card">
+                      {getInitials(cls.teacherName)}
+                    </div>
+
+                    <p className="text-sm text-muted-foreground line-clamp-1 mb-3">
+                      {cls.subject || t("teacherDashboard:classes.noSubject")}
+                    </p>
+
+                    <div className="flex items-center justify-between gap-2">
+                      <code className="text-xs font-mono bg-muted px-2 py-1 rounded border">
+                        {cls.code}
+                      </code>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
                         {pendingCount > 0 && (
-                          <span className="text-xs text-amber-700 bg-amber-100 border border-amber-200 rounded-full px-2 py-0.5 font-semibold">
-                            {pendingCount} pending
+                          <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-medium">
+                            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                            {t("teacherDashboard:classes.pending", { count: pendingCount })}
                           </span>
                         )}
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <ClipboardList className="h-3.5 w-3.5" /> {assignmentCount}
+                        <span className="flex items-center gap-1">
+                          <ClipboardList className="h-3 w-3" />
+                          {assignmentCount}
                         </span>
                       </div>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               );
             })}
           </div>
@@ -373,7 +481,7 @@ export default function TeacherDashboard() {
                   </div>
                   <div className="absolute top-3 right-3 flex items-center gap-2 z-10">
                     <span className="text-xs text-white/80 font-mono bg-black/20 px-2 py-1 rounded">
-                      {enrollmentsTotal.filter((e) => e.classroomId === selectedClassForDetail.id).length} students · Code: <strong>{selectedClassForDetail.code}</strong>
+                      {enrollmentsTotal.filter((e) => e.classroomId === selectedClassForDetail.id).length} {t("teacherDashboard:banner.students")} · {t("teacherDashboard:banner.code")}: <strong>{selectedClassForDetail.code}</strong>
                     </span>
                     <button
                       className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center text-white hover:bg-white/30 transition"
@@ -387,10 +495,10 @@ export default function TeacherDashboard() {
                 {/* Tab bar */}
                 <div className="flex shrink-0 border-b bg-card">
                   {[
-                    { id: "announcements", label: "Announcements", icon: <Megaphone className="h-3.5 w-3.5" /> },
-                    { id: "assignments", label: "Assignments", icon: <ClipboardList className="h-3.5 w-3.5" /> },
-                    { id: "requests", label: `Requests ${joinRequests.filter((r) => r.classroomId === selectedClassForDetail.id && r.status === "pending").length > 0 ? `(${joinRequests.filter((r) => r.classroomId === selectedClassForDetail.id && r.status === "pending").length})` : ""}`, icon: <UserCheck className="h-3.5 w-3.5" /> },
-                    { id: "materials", label: "Materials", icon: <FileText className="h-3.5 w-3.5" /> },
+                    { id: "announcements", label: t("teacherDashboard:tabs.announcements"), icon: <Megaphone className="h-3.5 w-3.5" /> },
+                    { id: "assignments", label: t("teacherDashboard:tabs.assignments"), icon: <ClipboardList className="h-3.5 w-3.5" /> },
+                    { id: "requests", label: t("teacherDashboard:tabs.requests") + (joinRequests.filter((r) => r.classroomId === selectedClassForDetail.id && r.status === "pending").length > 0 ? ` (${joinRequests.filter((r) => r.classroomId === selectedClassForDetail.id && r.status === "pending").length})` : ""), icon: <UserCheck className="h-3.5 w-3.5" /> },
+                    { id: "materials", label: t("teacherDashboard:tabs.materials"), icon: <FileText className="h-3.5 w-3.5" /> },
                   ].map((tab) => (
                     <button
                       key={tab.id}
@@ -415,12 +523,12 @@ export default function TeacherDashboard() {
                       {isAnnouncing && announceClassroomId === selectedClassForDetail.id ? (
                         <div className="rounded-lg border p-4 space-y-3 bg-muted/20">
                           <Input
-                            placeholder="Announcement title (optional)"
+                            placeholder={t("teacherDashboard:announcements.titlePlaceholder")}
                             value={announceTitle}
                             onChange={(e) => setAnnounceTitle(e.target.value)}
                           />
                           <Textarea
-                            placeholder={`Write a message for ${selectedClassForDetail.name}...`}
+                            placeholder={t("teacherDashboard:announcements.writeMessage", { name: selectedClassForDetail.name })}
                             value={announceContent}
                             onChange={(e) => setAnnounceContent(e.target.value)}
                             rows={3}
@@ -430,18 +538,18 @@ export default function TeacherDashboard() {
                           {classroomAnnouncements[0] && (
                             <div className="rounded bg-muted px-3 py-2">
                               <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide">
-                                Last sent · {formatDistanceToNow(new Date(classroomAnnouncements[0].created_at), { addSuffix: true })}
+                                {t("teacherDashboard:announcements.lastSent")} · {formatDistanceToNow(new Date(classroomAnnouncements[0].created_at), { addSuffix: true })}
                               </p>
                               <p className="text-xs text-foreground line-clamp-2 mt-0.5">{classroomAnnouncements[0].content}</p>
                             </div>
                           )}
                           <div className="flex gap-2 justify-end">
-                            <Button variant="ghost" size="sm" onClick={() => { setIsAnnouncing(false); setAnnounceClassroomId(null); }}>Cancel</Button>
+                            <Button variant="ghost" size="sm" onClick={() => { setIsAnnouncing(false); setAnnounceClassroomId(null); }}>{t("teacherDashboard:announcements.cancel")}</Button>
                             <Button size="sm" className="gap-1.5"
                               disabled={!announceContent.trim() || sendAnnouncementMutation.isPending}
                               onClick={() => sendAnnouncementMutation.mutate({ title: announceTitle, content: announceContent, classroomId: selectedClassForDetail.id })}
                             >
-                              <Send className="h-3.5 w-3.5" /> Send to Class
+                              <Send className="h-3.5 w-3.5" /> {t("teacherDashboard:announcements.sendToClass")}
                             </Button>
                           </div>
                         </div>
@@ -453,17 +561,17 @@ export default function TeacherDashboard() {
                           <div className="h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0 font-bold">
                             {getInitials(teacherName)}
                           </div>
-                          <span>Announce something to <strong>{selectedClassForDetail.name}</strong>...</span>
+                          <span>{t("teacherDashboard:announcements.trigger", { name: selectedClassForDetail.name })}</span>
                         </button>
                       )}
 
                       {/* Announcement history */}
                       <div className="space-y-2">
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">History</p>
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("teacherDashboard:announcements.history")}</p>
                         {classroomAnnouncements.length === 0 ? (
                           <div className="text-center py-8 text-muted-foreground">
                             <Megaphone className="h-8 w-8 mx-auto mb-2 opacity-20" />
-                            <p className="text-sm">No announcements yet for this classroom.</p>
+                            <p className="text-sm">{t("teacherDashboard:announcements.emptyForClass")}</p>
                           </div>
                         ) : (
                           classroomAnnouncements.map((ann, i) => (
@@ -476,7 +584,7 @@ export default function TeacherDashboard() {
                             >
                               <div className="flex items-center justify-between">
                                 {i === 0 && (
-                                  <span className="text-[10px] font-bold uppercase tracking-wide text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">Latest</span>
+                                  <span className="text-[10px] font-bold uppercase tracking-wide text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">{t("teacherDashboard:announcements.latest")}</span>
                                 )}
                                 <span className="text-[10px] text-muted-foreground ml-auto">
                                   {format(new Date(ann.created_at), "MMM d, h:mm a")}
@@ -497,8 +605,8 @@ export default function TeacherDashboard() {
                       {classroomAssignments.length === 0 ? (
                         <div className="text-center py-10 text-muted-foreground">
                           <ClipboardList className="h-10 w-10 mx-auto mb-3 opacity-20" />
-                          <p className="text-sm font-medium">No assignments sent to this classroom yet.</p>
-                          <p className="text-xs mt-1">Use Assignment Creator and select this classroom when publishing.</p>
+                          <p className="text-sm font-medium">{t("teacherDashboard:assignments.noAssignmentsInClass")}</p>
+                          <p className="text-xs mt-1">{t("teacherDashboard:assignments.createInstructions")}</p>
                         </div>
                       ) : (
                         <>
@@ -506,7 +614,7 @@ export default function TeacherDashboard() {
                           {classroomAssignments.filter((a) => a.status === "published").length > 0 && (
                             <div className="space-y-2">
                               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-                                <Check className="h-3.5 w-3.5 text-emerald-500" /> Published · Visible to Students
+                                <Check className="h-3.5 w-3.5 text-emerald-500" /> {t("teacherDashboard:assignments.publishedHeader")}
                               </p>
                               {classroomAssignments.filter((a) => a.status === "published").map((a) => (
                                 <AssignmentFeedCard key={a.id} assignment={a} onSelect={() => setSelectedAssignment(a.id)} isSelected={selectedAssignment === a.id} />
@@ -517,7 +625,7 @@ export default function TeacherDashboard() {
                           {classroomAssignments.filter((a) => a.status !== "published").length > 0 && (
                             <div className="space-y-2 mt-3">
                               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-                                <AlertCircle className="h-3.5 w-3.5 text-amber-500" /> Drafts · Not sent yet
+                                <AlertCircle className="h-3.5 w-3.5 text-amber-500" /> {t("teacherDashboard:assignments.draftsHeader")}
                               </p>
                               {classroomAssignments.filter((a) => a.status !== "published").map((a) => (
                                 <AssignmentFeedCard key={a.id} assignment={a} isDraft onSelect={() => setSelectedAssignment(a.id)} isSelected={selectedAssignment === a.id} />
@@ -535,7 +643,7 @@ export default function TeacherDashboard() {
                       {joinRequests.filter((r) => r.classroomId === selectedClassForDetail.id && r.status === "pending").length === 0 ? (
                         <div className="text-center py-10 text-muted-foreground">
                           <UserCheck className="h-8 w-8 mx-auto mb-2 opacity-20" />
-                          <p className="text-sm">No pending join requests.</p>
+                          <p className="text-sm">{t("teacherDashboard:assignments.noDrafts")}</p>
                         </div>
                       ) : (
                         joinRequests
@@ -544,7 +652,7 @@ export default function TeacherDashboard() {
                             <div key={req.id} className="flex items-center justify-between p-3 border rounded-lg bg-background">
                               <div>
                                 <p className="text-sm font-medium">{req.studentName}</p>
-                                <p className="text-xs text-muted-foreground">Requested to join</p>
+                                <p className="text-xs text-muted-foreground">{t("teacherDashboard:assignments.requestedToJoin")}</p>
                               </div>
                               <div className="flex gap-2">
                                 <Button size="sm" variant="outline" className="h-8 w-8 p-0 text-destructive border-destructive hover:bg-destructive/10" onClick={() => rejectJoinRequest(req.id)}>
@@ -564,13 +672,13 @@ export default function TeacherDashboard() {
                   {activeClassTab === "materials" && (
                     <div className="p-5 space-y-4">
                       <div className="flex items-center justify-between">
-                        <p className="text-sm font-semibold">Chapter PDFs / Materials</p>
+                        <p className="text-sm font-semibold">{t("teacherDashboard:materials.sectionTitle")}</p>
                         <div className="relative">
                           <input type="file" id="material-upload" accept=".pdf" className="hidden" onChange={handleUploadMaterial} disabled={isUploadingMaterial} />
                           <Label htmlFor="material-upload" className="cursor-pointer">
                             <div className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium border rounded-md transition ${isUploadingMaterial ? "opacity-50" : "hover:bg-accent"}`}>
                               {isUploadingMaterial ? <div className="h-3 w-3 rounded-full border-2 border-primary border-t-transparent animate-spin" /> : <Plus className="h-3 w-3" />}
-                              Upload PDF
+                              {t("teacherDashboard:materials.upload")}
                             </div>
                           </Label>
                         </div>
@@ -578,7 +686,7 @@ export default function TeacherDashboard() {
                       {materials.filter((m) => m.classroomId === selectedClassForDetail.id).length === 0 ? (
                         <div className="text-center p-8 border border-dashed rounded-lg text-muted-foreground text-sm">
                           <FileText className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                          <p>No materials uploaded yet</p>
+                          <p>{t("teacherDashboard:materials.empty")}</p>
                         </div>
                       ) : (
                         <div className="space-y-3">
@@ -615,13 +723,13 @@ export default function TeacherDashboard() {
         </Dialog>
 
         {/* ── Global Activity Stream ── */}
-        <div className="max-w-4xl mb-10 space-y-4">
+        <div className="max-w-4xl space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold flex items-center gap-2" style={{ fontFamily: "var(--font-display)" }}>
-              <Megaphone className="h-5 w-5 text-primary" /> Global Stream
+              <Megaphone className="h-5 w-5 text-primary" /> {t("teacherDashboard:announcements.globalStream")}
             </h2>
             <Button size="sm" variant="outline" className="gap-1.5 text-xs" onClick={() => { setIsAnnouncing(true); setAnnounceClassroomId(null); }}>
-              <Megaphone className="h-3.5 w-3.5" /> Announce to All
+              <Megaphone className="h-3.5 w-3.5" /> {t("teacherDashboard:announcements.announceToAll")}
             </Button>
           </div>
 
@@ -629,23 +737,23 @@ export default function TeacherDashboard() {
           {isAnnouncing && !announceClassroomId && (
             <Card className="shadow-none border border-slate-200">
               <CardContent className="p-4 space-y-3">
-                <Input placeholder="Announcement Title (optional)" value={announceTitle} onChange={(e) => setAnnounceTitle(e.target.value)} className="bg-muted/30" />
-                <Textarea placeholder="Announce something to all your classes..." value={announceContent} onChange={(e) => setAnnounceContent(e.target.value)} className="min-h-[80px] bg-muted/30" />
+                <Input placeholder={t("teacherDashboard:announcements.globalPlaceholderTitle")} value={announceTitle} onChange={(e) => setAnnounceTitle(e.target.value)} className="bg-muted/30" />
+                <Textarea placeholder={t("teacherDashboard:announcements.globalPlaceholder")} value={announceContent} onChange={(e) => setAnnounceContent(e.target.value)} className="min-h-[80px] bg-muted/30" />
                 {lastAnnouncement && (
                   <div className="rounded bg-muted px-3 py-2">
                     <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide">
-                      Last sent · {formatDistanceToNow(new Date(lastAnnouncement.created_at), { addSuffix: true })}
+                      {t("teacherDashboard:announcements.lastSent")} · {formatDistanceToNow(new Date(lastAnnouncement.created_at), { addSuffix: true })}
                     </p>
                     <p className="text-xs text-foreground line-clamp-1 mt-0.5">{lastAnnouncement.content}</p>
                   </div>
                 )}
                 <div className="flex justify-end gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => setIsAnnouncing(false)}>Cancel</Button>
+                  <Button variant="ghost" size="sm" onClick={() => setIsAnnouncing(false)}>{t("teacherDashboard:announcements.cancel")}</Button>
                   <Button size="sm" className="gap-1.5"
                     disabled={!announceContent.trim() || sendAnnouncementMutation.isPending}
                     onClick={() => sendAnnouncementMutation.mutate({ title: announceTitle, content: announceContent, classroomId: null })}
                   >
-                    <Send className="h-3.5 w-3.5" /> Send to All Classes
+                    <Send className="h-3.5 w-3.5" /> {t("teacherDashboard:announcements.sendToAll")}
                   </Button>
                 </div>
               </CardContent>
@@ -659,7 +767,7 @@ export default function TeacherDashboard() {
                 <div className="h-10 w-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 font-bold shrink-0">
                   {getInitials(teacherName)}
                 </div>
-                <p className="text-sm text-muted-foreground">Announce something to your classes...</p>
+                <p className="text-sm text-muted-foreground">{t("teacherDashboard:announcements.globalTrigger")}</p>
               </CardContent>
             </Card>
           )}
@@ -683,7 +791,7 @@ export default function TeacherDashboard() {
               return (
                 <div className="flex flex-col items-center justify-center py-16 bg-muted/20 rounded-xl border border-dashed text-muted-foreground">
                   <Megaphone className="h-10 w-10 mb-2 opacity-20" />
-                  <p className="text-sm">The global stream is quiet. Create an assignment or send an announcement.</p>
+                  <p className="text-sm">{t("teacherDashboard:announcements.emptyGlobal")}</p>
                 </div>
               );
             }
@@ -732,25 +840,25 @@ export default function TeacherDashboard() {
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap mb-0.5">
                             {a.status === "published" ? (
-                              <Badge className="text-[10px] bg-emerald-100 text-emerald-800 border-emerald-200 py-0">Sent to Students</Badge>
+                              <Badge className="text-[10px] bg-emerald-100 text-emerald-800 border-emerald-200 py-0">{t("teacherDashboard:assignments.sentToStudents")}</Badge>
                             ) : (
-                              <Badge className="text-[10px] bg-amber-100 text-amber-800 border-amber-200 py-0">Draft</Badge>
+                              <Badge className="text-[10px] bg-amber-100 text-amber-800 border-amber-200 py-0">{t("teacherDashboard:assignments.draft")}</Badge>
                             )}
                           </div>
                           <h4 className="text-sm sm:text-base font-semibold truncate">
-                            You posted a new assignment: {a.title}
+                            {t("teacherDashboard:assignments.newAssignment", { title: a.title })}
                           </h4>
                           <p className="text-xs text-muted-foreground mt-0.5">
-                            {a.created_at ? format(new Date(a.created_at), "MMM d, yyyy") : "Posted"}
-                            {a.due_date ? ` · Due ${format(new Date(a.due_date), "MMM d, yyyy")}` : ""}
-                            {a.total_marks ? ` · ${a.total_marks} marks` : ""}
+                            {a.created_at ? format(new Date(a.created_at), "MMM d, yyyy") : t("teacherDashboard:assignments.posted")}
+                            {a.due_date ? ` · ${t("teacherDashboard:assignments.due")} ${format(new Date(a.due_date), "MMM d, yyyy")}` : ""}
+                            {a.total_marks ? ` · ${a.total_marks} ${t("teacherDashboard:assignments.marks")}` : ""}
                           </p>
                         </div>
                         <Button
                           variant="ghost" size="icon" className="h-8 w-8 shrink-0"
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (confirm("Delete this assignment?")) deleteMutation.mutate(a.id);
+                            if (confirm(t("teacherDashboard:toasts.deleteConfirm"))) deleteMutation.mutate(a.id);
                           }}
                         >
                           <Trash2 className="h-4 w-4 text-destructive" />
@@ -766,23 +874,23 @@ export default function TeacherDashboard() {
 
         {/* Submission grading panel */}
         {selectedAssignment && (
-          <div className="space-y-4 max-w-4xl mb-10">
+          <div className="space-y-4 max-w-4xl">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-primary" />
-                <h3 className="text-xl font-bold" style={{ fontFamily: "var(--font-display)" }}>Student Submissions</h3>
+                <h3 className="text-xl font-bold" style={{ fontFamily: "var(--font-display)" }}>{t("teacherDashboard:grading.title")}</h3>
                 <Badge className="bg-primary/10 text-primary border-none ml-1">{submissions.length}</Badge>
               </div>
               <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setSelectedAssignment(null)}>
-                <X className="h-4 w-4 mr-1" /> Close
+                <X className="h-4 w-4 mr-1" /> {t("teacherDashboard:grading.close")}
               </Button>
             </div>
             {submissions.length === 0 ? (
               <Card className="border-dashed">
                 <CardContent className="py-10 text-center text-muted-foreground">
                   <Users className="h-10 w-10 mx-auto mb-2 opacity-20" />
-                  <p className="text-sm font-medium">No submissions yet for this assignment.</p>
-                  <p className="text-xs mt-1">Submissions will appear here once students upload their PDFs.</p>
+                  <p className="text-sm font-medium">{t("teacherDashboard:grading.empty")}</p>
+                  <p className="text-xs mt-1">{t("teacherDashboard:grading.emptyDesc")}</p>
                 </CardContent>
               </Card>
             ) : (
@@ -802,19 +910,19 @@ export default function TeacherDashboard() {
                               <p className="font-semibold text-sm">{s.student_name || s.student_id.slice(0, 8)}</p>
                               {s.student_email && <p className="text-xs text-muted-foreground">{s.student_email}</p>}
                               <p className="text-xs text-muted-foreground mt-0.5">
-                                Submitted {s.submitted_at ? format(new Date(s.submitted_at), "MMM d, yyyy 'at' h:mm a") : "—"}
+                                {t("teacherDashboard:grading.submitted")} {s.submitted_at ? format(new Date(s.submitted_at), "MMM d, yyyy 'at' h:mm a") : "—"}
                               </p>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
                             {pdfUrl && (
                               <Button size="sm" variant="outline" className="text-xs h-8 gap-1.5 border-blue-300 text-blue-700 hover:bg-blue-50" onClick={() => window.open(pdfUrl, "_blank")}>
-                                <FileText className="h-3.5 w-3.5" /> View Submitted PDF
+                                <FileText className="h-3.5 w-3.5" /> {t("teacherDashboard:grading.viewPdf")}
                               </Button>
                             )}
                             {s.marks != null && (
                               <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 border">
-                                {s.marks} marks
+                                {s.marks} {t("teacherDashboard:grading.marks")}
                               </Badge>
                             )}
                           </div>
@@ -827,23 +935,23 @@ export default function TeacherDashboard() {
                         )}
                         {s.extracted_text && (
                           <div className="rounded-md bg-accent/30 border border-accent p-3 text-sm space-y-1">
-                            <p className="font-medium text-xs text-muted-foreground">OCR Extracted Text</p>
+                            <p className="font-medium text-xs text-muted-foreground">{t("teacherDashboard:grading.ocrTitle")}</p>
                             <p className="whitespace-pre-wrap text-foreground line-clamp-4">{s.extracted_text}</p>
                           </div>
                         )}
                         <div className="flex gap-2 pt-1">
-                          <Input type="number" placeholder="Marks" defaultValue={s.marks ?? ""} className="w-24"
+                          <Input type="number" placeholder={t("teacherDashboard:grading.marksPlaceholder")} defaultValue={s.marks ?? ""} className="w-24"
                             onBlur={(e) => {
                               const val = e.target.value ? Number(e.target.value) : null;
                               gradeMutation.mutate({ id: s.id, marks: val, grade: s.grade || "", feedback: s.feedback || "" });
                             }}
                           />
-                          <Input placeholder="Grade (A+)" defaultValue={s.grade || ""} className="w-24"
+                          <Input placeholder={t("teacherDashboard:grading.gradePlaceholder")} defaultValue={s.grade || ""} className="w-24"
                             onBlur={(e) => {
                               if (e.target.value !== (s.grade || "")) gradeMutation.mutate({ id: s.id, marks: s.marks ?? null, grade: e.target.value, feedback: s.feedback || "" });
                             }}
                           />
-                          <Input placeholder="Feedback for student" defaultValue={s.feedback || ""} className="flex-1"
+                          <Input placeholder={t("teacherDashboard:grading.feedbackPlaceholder")} defaultValue={s.feedback || ""} className="flex-1"
                             onBlur={(e) => {
                               if (e.target.value !== (s.feedback || "")) gradeMutation.mutate({ id: s.id, marks: s.marks ?? null, grade: s.grade || "", feedback: e.target.value });
                             }}
@@ -861,14 +969,19 @@ export default function TeacherDashboard() {
         {/* ── Create Class Modal ── */}
         <Dialog open={createClassOpen} onOpenChange={setCreateClassOpen}>
           <DialogContent className="max-w-md">
-            <DialogHeader><DialogTitle>Create class</DialogTitle></DialogHeader>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" />
+                {t("teacherDashboard:createClass.title")}
+              </DialogTitle>
+            </DialogHeader>
             <form onSubmit={(e) => { e.preventDefault(); handleCreateClass(); }} className="space-y-4 mt-4">
-              <div className="space-y-2"><Label>Class name (required)</Label><Input value={newClassName} onChange={(e) => setNewClassName(e.target.value)} required autoFocus placeholder="e.g. Science 101" /></div>
-              <div className="space-y-2"><Label>Section</Label><Input value={newClassSection} onChange={(e) => setNewClassSection(e.target.value)} placeholder="e.g. Morning Batch" /></div>
-              <div className="space-y-2"><Label>Subject</Label><Input value={newClassSubject} onChange={(e) => setNewClassSubject(e.target.value)} placeholder="e.g. Physics" /></div>
+              <div className="space-y-2"><Label>{t("teacherDashboard:createClass.nameLabel")}</Label><Input value={newClassName} onChange={(e) => setNewClassName(e.target.value)} required autoFocus placeholder={t("teacherDashboard:createClass.namePlaceholder")} /></div>
+              <div className="space-y-2"><Label>{t("teacherDashboard:createClass.sectionLabel")}</Label><Input value={newClassSection} onChange={(e) => setNewClassSection(e.target.value)} placeholder={t("teacherDashboard:createClass.sectionPlaceholder")} /></div>
+              <div className="space-y-2"><Label>{t("teacherDashboard:createClass.subjectLabel")}</Label><Input value={newClassSubject} onChange={(e) => setNewClassSubject(e.target.value)} placeholder={t("teacherDashboard:createClass.subjectPlaceholder")} /></div>
               <div className="flex justify-end gap-2 pt-4">
-                <Button variant="ghost" type="button" onClick={() => setCreateClassOpen(false)}>Cancel</Button>
-                <Button type="submit" disabled={!newClassName.trim()}>Create</Button>
+                <Button variant="ghost" type="button" onClick={() => setCreateClassOpen(false)}>{t("teacherDashboard:createClass.cancel")}</Button>
+                <Button type="submit" disabled={!newClassName.trim()}>{t("teacherDashboard:createClass.create")}</Button>
               </div>
             </form>
           </DialogContent>
@@ -877,14 +990,14 @@ export default function TeacherDashboard() {
         {/* ── Edit Class Modal ── */}
         <Dialog open={editClassOpen} onOpenChange={setEditClassOpen}>
           <DialogContent className="max-w-md">
-            <DialogHeader><DialogTitle>Edit class details</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{t("teacherDashboard:editClass.title")}</DialogTitle></DialogHeader>
             <form onSubmit={(e) => { e.preventDefault(); handleEditClass(); }} className="space-y-4 mt-4">
-              <div className="space-y-2"><Label>Class name (required)</Label><Input value={editClassName} onChange={(e) => setEditClassName(e.target.value)} required autoFocus /></div>
-              <div className="space-y-2"><Label>Section</Label><Input value={editClassSection} onChange={(e) => setEditClassSection(e.target.value)} /></div>
-              <div className="space-y-2"><Label>Subject</Label><Input value={editClassSubject} onChange={(e) => setEditClassSubject(e.target.value)} /></div>
+              <div className="space-y-2"><Label>{t("teacherDashboard:editClass.nameLabel")}</Label><Input value={editClassName} onChange={(e) => setEditClassName(e.target.value)} required autoFocus /></div>
+              <div className="space-y-2"><Label>{t("teacherDashboard:editClass.sectionLabel")}</Label><Input value={editClassSection} onChange={(e) => setEditClassSection(e.target.value)} /></div>
+              <div className="space-y-2"><Label>{t("teacherDashboard:editClass.subjectLabel")}</Label><Input value={editClassSubject} onChange={(e) => setEditClassSubject(e.target.value)} /></div>
               <div className="flex justify-end gap-2 pt-4">
-                <Button variant="ghost" type="button" onClick={() => setEditClassOpen(false)}>Cancel</Button>
-                <Button type="submit" disabled={!editClassName.trim()}>Save</Button>
+                <Button variant="ghost" type="button" onClick={() => setEditClassOpen(false)}>{t("teacherDashboard:editClass.cancel")}</Button>
+                <Button type="submit" disabled={!editClassName.trim()}>{t("teacherDashboard:editClass.save")}</Button>
               </div>
             </form>
           </DialogContent>
@@ -895,7 +1008,7 @@ export default function TeacherDashboard() {
           <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col">
             <DialogHeader>
               <DialogTitle>{viewingMaterialText?.title}</DialogTitle>
-              <DialogDescription>Extracted text representation.</DialogDescription>
+              <DialogDescription>{t("teacherDashboard:materials.extractedText")}</DialogDescription>
             </DialogHeader>
             <div className="flex-1 overflow-y-auto p-4 bg-muted/30 rounded-md whitespace-pre-wrap font-mono text-sm">
               {viewingMaterialText?.content}
@@ -903,36 +1016,6 @@ export default function TeacherDashboard() {
           </DialogContent>
         </Dialog>
       </div>
-
-      {/* ══════════════ SCOPED STYLES ══════════════ */}
-      <style>{`
-        .gc-topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; gap: 12px; flex-wrap: wrap; }
-        .gc-greeting { font-size: 1.5rem; font-weight: 700; color: hsl(var(--foreground)); margin: 0; }
-        .gc-name { color: hsl(var(--primary)); }
-        .gc-sub { font-size: 0.875rem; color: hsl(var(--muted-foreground)); margin: 4px 0 0; }
-        .gc-join-btn { display: flex; align-items: center; gap: 6px; background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); border-radius: 24px; padding: 10px 20px; font-weight: 600; font-size: 0.9rem; border: none; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,.15); transition: filter .2s; }
-        .gc-join-btn:hover { filter: brightness(0.9); }
-        .gc-btn-icon { width: 18px; height: 18px; }
-
-        .gc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
-
-        .gc-card { border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.1); cursor: pointer; transition: box-shadow .2s, transform .2s; background: hsl(var(--card)); border: 1px solid hsl(var(--border)); }
-        .gc-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.15); transform: translateY(-2px); }
-        .gc-card-banner { position: relative; height: 100px; padding: 16px; overflow: hidden; }
-        .gc-card-banner-content { position: relative; z-index: 1; }
-        .gc-card-name { font-size: 1.05rem; font-weight: 700; color: #fff; margin: 0 0 2px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        .gc-card-section { font-size: 0.78rem; color: rgba(255,255,255,.85); margin: 0; }
-        .gc-card-teacher { font-size: 0.82rem; color: rgba(255,255,255,.9); margin: 2px 0 0; font-weight: 600; text-transform: uppercase; }
-        .gc-card-menu { position: absolute; top: 8px; right: 8px; z-index: 10; }
-        .gc-more-btn { width: 36px; height: 36px; border-radius: 50%; border: none; background: rgba(255,255,255,.2); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background .15s; }
-        .gc-more-btn:hover { background: rgba(255,255,255,.3); }
-        .gc-teacher-avatar { position: absolute; bottom: -20px; left: 16px; width: 48px; height: 48px; border-radius: 50%; background: hsl(var(--card)); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.9rem; color: hsl(var(--foreground)); box-shadow: 0 2px 6px rgba(0,0,0,.15); border: 3px solid hsl(var(--card)); z-index: 2; }
-        .gc-card-body { padding: 32px 16px 12px; background: hsl(var(--card)); }
-
-        .gc-dropdown { background: hsl(var(--popover)); border: 1px solid hsl(var(--border)); border-radius: 8px; padding: 4px; }
-        .gc-dd-item { display: flex; align-items: center; gap: 10px; padding: 10px 16px; font-size: 0.875rem; color: hsl(var(--foreground)); cursor: pointer; border-radius: 4px; }
-        .gc-dd-item:hover { background: hsl(var(--muted)); }
-      `}</style>
     </DashboardLayout>
   );
 }
@@ -949,6 +1032,7 @@ function AssignmentFeedCard({
   onSelect: () => void;
   isSelected: boolean;
 }) {
+  const { t } = useTranslation("pages");
   const isOverdue = assignment.due_date && new Date(assignment.due_date) < new Date();
   return (
     <div
@@ -962,9 +1046,9 @@ function AssignmentFeedCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
             {isDraft ? (
-              <Badge className="text-[10px] bg-amber-100 text-amber-800 border-amber-200 py-0">Draft</Badge>
+              <Badge className="text-[10px] bg-amber-100 text-amber-800 border-amber-200 py-0">{t("teacherDashboard:assignments.draft")}</Badge>
             ) : (
-              <Badge className="text-[10px] bg-emerald-100 text-emerald-800 border-emerald-200 py-0">Sent to Students</Badge>
+              <Badge className="text-[10px] bg-emerald-100 text-emerald-800 border-emerald-200 py-0">{t("teacherDashboard:assignments.sentToStudents")}</Badge>
             )}
           </div>
           <p className="font-medium text-sm truncate">{assignment.title}</p>
@@ -977,7 +1061,7 @@ function AssignmentFeedCard({
         {assignment.due_date && (
           <span className={`flex items-center gap-1 ${isOverdue && !isDraft ? "text-destructive font-medium" : ""}`}>
             <Clock className="h-3 w-3" />
-            {isOverdue && !isDraft ? "Overdue · " : "Due · "}
+            {isOverdue && !isDraft ? "Overdue · " : `${t("teacherDashboard:assignments.due")} · `}
             {format(new Date(assignment.due_date), "MMM d")}
           </span>
         )}

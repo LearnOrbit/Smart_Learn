@@ -2,9 +2,11 @@
 // Matches the 3-layer architecture: Data & Preprocessing → Predictive Analytics → GenAI & Evaluation
 
 import { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
 import { apiClient } from "@/integrations/api/client";
+import { loadPageNamespace } from "@/i18n";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -64,13 +66,13 @@ function les(p: PerformanceData) {
   );
 }
 
-function riskLevel(score: number): { label: string; color: string; bg: string; icon: React.ElementType } {
-  if (score >= 70) return { label: "Low Risk", color: "text-emerald-700", bg: "bg-emerald-50 border-emerald-200", icon: CheckCircle2 };
-  if (score >= 50) return { label: "Moderate Risk", color: "text-amber-700", bg: "bg-amber-50 border-amber-200", icon: AlertTriangle };
-  return { label: "High Risk", color: "text-red-700", bg: "bg-red-50 border-red-200", icon: AlertTriangle };
+function riskLevel(score: number, t: (k: string) => string): { label: string; color: string; bg: string; icon: React.ElementType } {
+  if (score >= 70) return { label: t("lesAnalytics:risk.low"), color: "text-emerald-700", bg: "bg-emerald-50 border-emerald-200", icon: CheckCircle2 };
+  if (score >= 50) return { label: t("lesAnalytics:risk.moderate"), color: "text-amber-700", bg: "bg-amber-50 border-amber-200", icon: AlertTriangle };
+  return { label: t("lesAnalytics:risk.high"), color: "text-red-700", bg: "bg-red-50 border-red-200", icon: AlertTriangle };
 }
 
-function GaugeMeter({ score }: { score: number }) {
+function GaugeMeter({ score, tLabel }: { score: number; tLabel: string }) {
   const angle = (score / 100) * 180 - 90;
   const color = score >= 70 ? "#10b981" : score >= 50 ? "#f59e0b" : "#ef4444";
   return (
@@ -88,12 +90,12 @@ function GaugeMeter({ score }: { score: number }) {
         </g>
         <text x="60" y="75" textAnchor="middle" fontSize="14" fontWeight="bold" fill={color}>{score}</text>
       </svg>
-      <p className="text-xs text-muted-foreground -mt-2">LES Score / 100</p>
+      <p className="text-xs text-muted-foreground -mt-2">{tLabel}</p>
     </div>
   );
 }
 
-function Bar({ label, value, max = 100, color = "bg-blue-500" }: { label: string; value: number; max?: number; color?: string }) {
+function Bar({ label, value, max = 100, color = "bg-blue-500" }: { label: React.ReactNode; value: number; max?: number; color?: string }) {
   const pct = Math.min((value / max) * 100, 100);
   return (
     <div className="space-y-1">
@@ -123,7 +125,10 @@ function PipelineArrow() {
 
 export default function LESAnalyticsDashboard() {
   const { user } = useAuth();
+  const { t } = useTranslation("pages");
   const isTeacher = user?.role === "teacher";
+
+  useEffect(() => { void loadPageNamespace("lesAnalytics"); }, []);
 
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedId, setSelectedId] = useState<string>("");
@@ -178,7 +183,7 @@ export default function LESAnalyticsDashboard() {
   }, [isTeacher, selectedId, user?.id, perf]);
 
   const lesScore = perf ? les(perf) : null;
-  const risk = lesScore !== null ? riskLevel(lesScore) : null;
+  const risk = lesScore !== null ? riskLevel(lesScore, t) : null;
   const activeLayers = { layer1: ["layer1","layer2","layer3","done"].includes(phase), layer2: ["layer2","layer3","done"].includes(phase), layer3: ["layer3","done"].includes(phase) };
 
   return (
@@ -191,11 +196,11 @@ export default function LESAnalyticsDashboard() {
             <div className="flex items-center gap-2 mb-1">
               <Layers className="h-5 w-5 text-primary" />
               <h1 className="text-2xl font-bold" style={{ fontFamily: "var(--font-display)" }}>
-                Hybrid ML + Generative AI Framework
+                {t("lesAnalytics:header.title")}
               </h1>
             </div>
             <p className="text-sm text-muted-foreground">
-              3-layer pipeline: Data Collection → Predictive Analytics (LES) → GenAI Advisory
+              {t("lesAnalytics:header.description")}
             </p>
           </div>
           {isTeacher && (
@@ -205,12 +210,12 @@ export default function LESAnalyticsDashboard() {
                 onChange={e => setSelectedId(e.target.value)}
                 className="text-sm px-3 py-2 border rounded-lg bg-background text-foreground border-border focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
-                {students.length === 0 && <option>No students</option>}
+                {students.length === 0 && <option>{t("lesAnalytics:noStudents")}</option>}
                 {students.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
               <Button onClick={runPipeline} disabled={!perf || phase === "layer1" || phase === "layer2"} className="gap-2">
                 <RefreshCw className={`h-4 w-4 ${["layer1","layer2","layer3"].includes(phase) ? "animate-spin" : ""}`} />
-                Run Pipeline
+                {t("lesAnalytics:header.runPipeline")}
               </Button>
             </div>
           )}
@@ -222,9 +227,9 @@ export default function LESAnalyticsDashboard() {
             <CardContent className="pt-5 flex gap-3">
               <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
               <div>
-                <p className="font-medium text-amber-900 dark:text-amber-200">Awaiting Performance Data</p>
+                <p className="font-medium text-amber-900 dark:text-amber-200">{t("lesAnalytics:noData.title")}</p>
                 <p className="text-sm text-amber-800 dark:text-amber-300">
-                  {isTeacher ? "Select a student who has performance data entered." : "Your teacher hasn't entered your marks yet."}
+                  {isTeacher ? t("lesAnalytics:noData.teacherHint") : t("lesAnalytics:noData.studentHint")}
                 </p>
               </div>
             </CardContent>
@@ -244,38 +249,44 @@ export default function LESAnalyticsDashboard() {
                       <Database className="h-5 w-5 text-blue-600" />
                     </div>
                     <div>
-                      <CardTitle className="text-base">LAYER 1 — Data Collection & Preprocessing</CardTitle>
-                      <CardDescription className="text-xs">Raw feature ingestion → missing value handling → normalization → LO-CO-PO mapping</CardDescription>
+                      <CardTitle className="text-base">{t("lesAnalytics:layers.layer1.title")}</CardTitle>
+                      <CardDescription className="text-xs">{t("lesAnalytics:layers.layer1.description")}</CardDescription>
                     </div>
-                    <Badge className="ml-auto bg-blue-100 text-blue-700 border-0">✓ Ingested</Badge>
+                    <Badge className="ml-auto bg-blue-100 text-blue-700 border-0">{t("lesAnalytics:layers.layer1.ingested")}</Badge>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-5">
                   {/* Data Collection */}
                   <div>
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                      <ClipboardList className="h-3.5 w-3.5" /> Data Collection
+                      <ClipboardList className="h-3.5 w-3.5" /> {t("lesAnalytics:layers.layer1.dataCollection")}
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <Bar label="Student Marks" value={perf?.student_marks ?? 0} color="bg-blue-500" />
-                      <Bar label="Attendance" value={perf?.attendance ?? 0} color="bg-sky-500" />
-                      <Bar label="Internal Assessments" value={perf?.internal_assessments ?? 0} max={20} color="bg-indigo-500" />
-                      <Bar label="Lab Performance" value={perf?.lab_performance ?? 0} max={25} color="bg-violet-500" />
-                      <Bar label="Assignment Scores" value={perf?.assignment_scores ?? 0} max={10} color="bg-purple-500" />
-                      <Bar label="Study Hours / Week" value={perf?.study_hours ?? 0} max={168} color="bg-fuchsia-500" />
-                      <Bar label="Concept Mastery" value={perf?.concept_mastery ?? 0} color="bg-pink-500" />
+                      <Bar label={t("lesAnalytics:layers.layer1.studentMarks")} value={perf?.student_marks ?? 0} color="bg-blue-500" />
+                      <Bar label={t("lesAnalytics:layers.layer1.attendance")} value={perf?.attendance ?? 0} color="bg-sky-500" />
+                      <Bar label={t("lesAnalytics:layers.layer1.internalAssessments")} value={perf?.internal_assessments ?? 0} max={20} color="bg-indigo-500" />
+                      <Bar label={t("lesAnalytics:layers.layer1.labPerformance")} value={perf?.lab_performance ?? 0} max={25} color="bg-violet-500" />
+                      <Bar label={t("lesAnalytics:layers.layer1.assignmentScores")} value={perf?.assignment_scores ?? 0} max={10} color="bg-purple-500" />
+                      <Bar label={t("lesAnalytics:layers.layer1.studyHours")} value={perf?.study_hours ?? 0} max={168} color="bg-fuchsia-500" />
+                      <Bar label={t("lesAnalytics:layers.layer1.conceptMastery")} value={perf?.concept_mastery ?? 0} color="bg-pink-500" />
                     </div>
                   </div>
 
                   {/* Preprocessing steps */}
                   <div className="border-t pt-4">
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                      <SlidersHorizontal className="h-3.5 w-3.5" /> Data Preprocessing & Feature Engineering
+                      <SlidersHorizontal className="h-3.5 w-3.5" /> {t("lesAnalytics:layers.layer1.preprocessing")}
                     </p>
                     <div className="flex flex-wrap gap-2">
-                      {["Missing Value Handling", "Normalization / Scaling", "Feature Weighting", "LO-CO-PO Mapping", "LES Computation"].map(step => (
-                        <span key={step} className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 rounded-full border border-blue-200 dark:border-blue-800">
-                          <CheckCircle2 className="h-3 w-3" /> {step}
+                      {[
+                        { key: "missing" },
+                        { key: "normalization" },
+                        { key: "weighting" },
+                        { key: "loco" },
+                        { key: "les" },
+                      ].map(step => (
+                        <span key={step.key} className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 rounded-full border border-blue-200 dark:border-blue-800">
+                          <CheckCircle2 className="h-3 w-3" /> {t(`lesAnalytics:layers.layer1.steps.${step.key}`)}
                         </span>
                       ))}
                     </div>
@@ -297,10 +308,10 @@ export default function LESAnalyticsDashboard() {
                       <Cpu className="h-5 w-5 text-purple-600" />
                     </div>
                     <div>
-                      <CardTitle className="text-base">LAYER 2 — Predictive Analytics</CardTitle>
-                      <CardDescription className="text-xs">ML model ensemble → model selection → LES output → risk classification</CardDescription>
+                      <CardTitle className="text-base">{t("lesAnalytics:layers.layer2.title")}</CardTitle>
+                      <CardDescription className="text-xs">{t("lesAnalytics:layers.layer2.description")}</CardDescription>
                     </div>
-                    <Badge className="ml-auto bg-purple-100 text-purple-700 border-0">✓ Computed</Badge>
+                    <Badge className="ml-auto bg-purple-100 text-purple-700 border-0">{t("lesAnalytics:layers.layer2.computed")}</Badge>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-5">
@@ -308,19 +319,19 @@ export default function LESAnalyticsDashboard() {
                     {/* ML Models */}
                     <div className="md:col-span-1 space-y-3">
                       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                        <GitBranch className="h-3.5 w-3.5" /> ML Model Ensemble
+                        <GitBranch className="h-3.5 w-3.5" /> {t("lesAnalytics:layers.layer2.ensemble")}
                       </p>
                       {[
-                        { name: "Linear Regression", r2: 0.71, active: false },
-                        { name: "Random Forest", r2: 0.88, active: true },
-                        { name: "Gradient Boosting", r2: 0.85, active: false },
-                        { name: "XGBoost", r2: 0.87, active: false },
-                        { name: "Logistic Reg. (Risk)", r2: 0.82, active: false },
+                        { key: "linear", r2: 0.71, active: false },
+                        { key: "randomForest", r2: 0.88, active: true },
+                        { key: "gradientBoost", r2: 0.85, active: false },
+                        { key: "xgboost", r2: 0.87, active: false },
+                        { key: "logistic", r2: 0.82, active: false },
                       ].map(m => (
                         <div key={m.name} className={`flex items-center justify-between px-3 py-2 rounded-lg border text-xs ${m.active ? "bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800 font-semibold" : "bg-muted/40 border-border"}`}>
                           <span className="flex items-center gap-2">
                             {m.active && <ChevronRight className="h-3.5 w-3.5 text-purple-600" />}
-                            {m.name}
+                            {t(`lesAnalytics:models.${m.key}`)}
                           </span>
                           <span className={m.active ? "text-purple-700 dark:text-purple-300" : "text-muted-foreground"}>R²={m.r2}</span>
                         </div>
@@ -331,17 +342,17 @@ export default function LESAnalyticsDashboard() {
                     <div className="md:col-span-2 space-y-4">
                       <div>
                         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                          <FlaskConical className="h-3.5 w-3.5" /> Model Selection Metrics
+                          <FlaskConical className="h-3.5 w-3.5" /> {t("lesAnalytics:layers.layer2.metrics")}
                         </p>
                         <div className="grid grid-cols-4 gap-2 text-center">
                           {[
-                            { label: "R² Score", value: "0.88", good: true },
-                            { label: "RMSE", value: "4.32", good: true },
-                            { label: "MAE", value: "3.17", good: true },
-                            { label: "Cross-Val", value: "5-fold", good: true },
+                            { key: "r2", value: "0.88" },
+                            { key: "rmse", value: "4.32" },
+                            { key: "mae", value: "3.17" },
+                            { key: "crossVal", value: "5-fold" },
                           ].map(m => (
-                            <div key={m.label} className="rounded-lg bg-muted/50 border p-2">
-                              <p className="text-xs text-muted-foreground">{m.label}</p>
+                            <div key={m.key} className="rounded-lg bg-muted/50 border p-2">
+                              <p className="text-xs text-muted-foreground">{t(`lesAnalytics:metrics.${m.key}`)}</p>
                               <p className="font-bold text-sm mt-0.5">{m.value}</p>
                             </div>
                           ))}
@@ -350,10 +361,10 @@ export default function LESAnalyticsDashboard() {
 
                       <div className="border-t pt-4">
                         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                          <Gauge className="h-3.5 w-3.5" /> Pipeline Output
+                          <Gauge className="h-3.5 w-3.5" /> {t("lesAnalytics:layers.layer2.pipelineOutput")}
                         </p>
                         <div className="flex flex-wrap items-center gap-6">
-                          {lesScore !== null && <GaugeMeter score={lesScore} />}
+                          {lesScore !== null && <GaugeMeter score={lesScore} tLabel={t("lesAnalytics:layers.layer2.lesScore")} />}
                           {risk && (
                             <div className={`flex-1 flex flex-col gap-3 p-4 rounded-xl border ${risk.bg}`}>
                               <div className="flex items-center gap-2">
@@ -361,8 +372,8 @@ export default function LESAnalyticsDashboard() {
                                 <span className={`font-bold text-lg ${risk.color}`}>{risk.label}</span>
                               </div>
                               <div className="text-sm space-y-1 text-muted-foreground">
-                                <p>LES: <strong className="text-foreground">{lesScore}/100</strong></p>
-                                <p>Classification: <strong className="text-foreground">{lesScore >= 70 ? "Low" : lesScore >= 50 ? "Moderate" : "High"}</strong></p>
+                                <p>{t("lesAnalytics:layers.layer2.les")} <strong className="text-foreground">{lesScore}/100</strong></p>
+                                <p>{t("lesAnalytics:layers.layer2.classification")} <strong className="text-foreground">{lesScore >= 70 ? t("lesAnalytics:class.low") : lesScore >= 50 ? t("lesAnalytics:class.moderate") : t("lesAnalytics:class.high")}</strong></p>
                               </div>
                             </div>
                           )}
@@ -387,12 +398,12 @@ export default function LESAnalyticsDashboard() {
                       <Sparkles className="h-5 w-5 text-emerald-600" />
                     </div>
                     <div>
-                      <CardTitle className="text-base">LAYER 3 — Generative AI & Evaluation</CardTitle>
-                      <CardDescription className="text-xs">Gap identification → GenAI advisory → re-assessment → continuous model updating</CardDescription>
+                      <CardTitle className="text-base">{t("lesAnalytics:layers.layer3.title")}</CardTitle>
+                      <CardDescription className="text-xs">{t("lesAnalytics:layers.layer3.description")}</CardDescription>
                     </div>
-                    {!aiLoading && aiData && <Badge className="ml-auto bg-emerald-100 text-emerald-700 border-0">✓ Advisory Generated</Badge>}
-                    {aiLoading && <Badge className="ml-auto bg-yellow-100 text-yellow-700 border-0 animate-pulse">Running GenAI…</Badge>}
-                    {aiError && <Badge className="ml-auto bg-red-100 text-red-700 border-0">⚠ Offline Fallback</Badge>}
+                    {!aiLoading && aiData && <Badge className="ml-auto bg-emerald-100 text-emerald-700 border-0">{t("lesAnalytics:layers.layer3.advisoryGenerated")}</Badge>}
+                    {aiLoading && <Badge className="ml-auto bg-yellow-100 text-yellow-700 border-0 animate-pulse">{t("lesAnalytics:layers.layer3.running")}</Badge>}
+                    {aiError && <Badge className="ml-auto bg-red-100 text-red-700 border-0">{t("lesAnalytics:layers.layer3.offline")}</Badge>}
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -401,20 +412,20 @@ export default function LESAnalyticsDashboard() {
                   {perf && (
                     <div>
                       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                        <Target className="h-3.5 w-3.5" /> Gap Identification
+                        <Target className="h-3.5 w-3.5" /> {t("lesAnalytics:layers.layer3.gap")}
                       </p>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         {[
-                          { label: "Weak Concept Detection", icon: TrendingDown, value: perf.concept_mastery < 50 ? "Detected" : "Clear", bad: perf.concept_mastery < 50 },
-                          { label: "Low Outcome Attainment", icon: AlertTriangle, value: perf.internal_assessments < 10 ? "Detected" : "Clear", bad: perf.internal_assessments < 10 },
-                          { label: "Skill Deficiency Analysis", icon: Activity, value: perf.lab_performance < 12.5 ? "Detected" : "Clear", bad: perf.lab_performance < 12.5 },
+                          { key: "weakConcept", icon: TrendingDown, value: perf.concept_mastery < 50 ? t("lesAnalytics:gap.detected") : t("lesAnalytics:gap.clear"), bad: perf.concept_mastery < 50 },
+                          { key: "lowOutcome", icon: AlertTriangle, value: perf.internal_assessments < 10 ? t("lesAnalytics:gap.detected") : t("lesAnalytics:gap.clear"), bad: perf.internal_assessments < 10 },
+                          { key: "skill", icon: Activity, value: perf.lab_performance < 12.5 ? t("lesAnalytics:gap.detected") : t("lesAnalytics:gap.clear"), bad: perf.lab_performance < 12.5 },
                         ].map(g => (
-                          <div key={g.label} className={`p-3 rounded-xl border text-sm ${g.bad ? "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800" : "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800"}`}>
+                          <div key={g.key} className={`p-3 rounded-xl border text-sm ${g.bad ? "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800" : "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800"}`}>
                             <div className={`flex items-center gap-2 font-semibold mb-1 ${g.bad ? "text-red-700 dark:text-red-300" : "text-emerald-700 dark:text-emerald-300"}`}>
                               <g.icon className="h-3.5 w-3.5" />
                               {g.value}
                             </div>
-                            <p className="text-xs text-muted-foreground">{g.label}</p>
+                            <p className="text-xs text-muted-foreground">{t(`lesAnalytics:gap.${g.key}`)}</p>
                           </div>
                         ))}
                       </div>
@@ -431,9 +442,9 @@ export default function LESAnalyticsDashboard() {
                   {/* AI Error */}
                   {aiError && !aiLoading && (
                     <div className="p-4 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/20 text-sm">
-                      <p className="font-semibold text-amber-800 dark:text-amber-200 mb-1">⚠ AI Advisory Service Offline</p>
+                      <p className="font-semibold text-amber-800 dark:text-amber-200 mb-1">{t("lesAnalytics:layers.layer3.offlineTitle")}</p>
                       <p className="text-amber-700 dark:text-amber-300 text-xs">{aiError}</p>
-                      <p className="text-amber-600 dark:text-amber-400 text-xs mt-1">Gap identification from Layer 1 data is shown above. Start the backend AI service for full advisory.</p>
+                      <p className="text-amber-600 dark:text-amber-400 text-xs mt-1">{t("lesAnalytics:layers.layer3.offlineHint")}</p>
                     </div>
                   )}
 
@@ -443,20 +454,20 @@ export default function LESAnalyticsDashboard() {
                       {/* Generative AI Advisory */}
                       <div>
                         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                          <Brain className="h-3.5 w-3.5" /> Generative AI Advisory Layer
+                          <Brain className="h-3.5 w-3.5" /> {t("lesAnalytics:layers.layer3.genAi")}
                         </p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                           {/* Weak topics */}
                           <Card className="bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800">
                             <CardContent className="pt-4">
-                              <p className="text-xs font-semibold text-red-700 dark:text-red-300 mb-2 flex items-center gap-1"><AlertTriangle className="h-3.5 w-3.5" /> Weak Areas</p>
-                              {aiData.weak_topics.length === 0 ? <p className="text-xs text-muted-foreground">None detected</p> : aiData.weak_topics.map(t => <p key={t} className="text-xs text-red-800 dark:text-red-300 leading-relaxed">• {t}</p>)}
+                              <p className="text-xs font-semibold text-red-700 dark:text-red-300 mb-2 flex items-center gap-1"><AlertTriangle className="h-3.5 w-3.5" /> {t("lesAnalytics:layers.layer3.weak")}</p>
+                              {aiData.weak_topics.length === 0 ? <p className="text-xs text-muted-foreground">{t("lesAnalytics:layers.layer3.noneDetected")}</p> : aiData.weak_topics.map(t => <p key={t} className="text-xs text-red-800 dark:text-red-300 leading-relaxed">• {t}</p>)}
                             </CardContent>
                           </Card>
                           {/* Recommendations */}
                           <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800 sm:col-span-2">
                             <CardContent className="pt-4">
-                              <p className="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-2 flex items-center gap-1"><Zap className="h-3.5 w-3.5" /> Personalized Recommendations</p>
+                              <p className="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-2 flex items-center gap-1"><Zap className="h-3.5 w-3.5" /> {t("lesAnalytics:layers.layer3.recommendations")}</p>
                               <div className="space-y-1.5">
                                 {aiData.key_recommendations.slice(0, 4).map((r, i) => (
                                   <div key={i} className="flex gap-2 text-xs text-blue-800 dark:text-blue-300">
@@ -472,13 +483,13 @@ export default function LESAnalyticsDashboard() {
                       {/* 5-Day Study Plan */}
                       <div>
                         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                          <Calendar className="h-3.5 w-3.5" /> Adaptive Weekly Schedule (5-Day Study Plan)
+                          <Calendar className="h-3.5 w-3.5" /> {t("lesAnalytics:layers.layer3.studyPlan")}
                         </p>
                         <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">
                           {aiData.five_day_study_plan.map(d => (
                             <Card key={d.day} className="text-xs">
                               <CardContent className="pt-3 pb-3">
-                                <p className="font-bold text-sm mb-1">Day {d.day}</p>
+                                <p className="font-bold text-sm mb-1">{t("lesAnalytics:day", { n: d.day })}</p>
                                 <p className="text-muted-foreground mb-2">{d.daily_hours.toFixed(1)}h</p>
                                 <div className="space-y-0.5">
                                   {d.topics.map(t => <p key={t} className="truncate text-foreground/80">• {t}</p>)}
@@ -494,13 +505,13 @@ export default function LESAnalyticsDashboard() {
                         {/* Re-Assessment */}
                         <div>
                           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                            <RefreshCw className="h-3.5 w-3.5" /> Re-Assessment
+                            <RefreshCw className="h-3.5 w-3.5" /> {t("lesAnalytics:layers.layer3.reassessment")}
                           </p>
                           <Card className="bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800">
                             <CardContent className="pt-4 space-y-2">
-                              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Post-Intervention Eval</span><Badge variant="outline" className="text-emerald-700 border-emerald-400 text-xs">Pending</Badge></div>
-                              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Updated LES Target</span><span className="font-semibold">{Math.min(100, (lesScore ?? 0) + 12)}/100</span></div>
-                              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Study Hours Needed</span><span className="font-semibold">{aiData.total_study_hours_needed.toFixed(1)}h</span></div>
+                              <div className="flex justify-between text-sm"><span className="text-muted-foreground">{t("lesAnalytics:reassessment.post")}</span><Badge variant="outline" className="text-emerald-700 border-emerald-400 text-xs">{t("lesAnalytics:reassessment.pending")}</Badge></div>
+                              <div className="flex justify-between text-sm"><span className="text-muted-foreground">{t("lesAnalytics:reassessment.updated")}</span><span className="font-semibold">{Math.min(100, (lesScore ?? 0) + 12)}/100</span></div>
+                              <div className="flex justify-between text-sm"><span className="text-muted-foreground">{t("lesAnalytics:reassessment.hoursNeeded")}</span><span className="font-semibold">{aiData.total_study_hours_needed.toFixed(1)}h</span></div>
                               {aiData.next_milestones.slice(0,2).map((m, i) => (
                                 <p key={i} className="text-xs text-emerald-800 dark:text-emerald-300">• {m}</p>
                               ))}
@@ -511,20 +522,20 @@ export default function LESAnalyticsDashboard() {
                         {/* Statistical Evaluation */}
                         <div>
                           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                            <BarChart3 className="h-3.5 w-3.5" /> Statistical Evaluation
+                            <BarChart3 className="h-3.5 w-3.5" /> {t("lesAnalytics:layers.layer3.statsEval")}
                           </p>
                           <Card className="bg-violet-50 dark:bg-violet-950/20 border-violet-200 dark:border-violet-800">
                             <CardContent className="pt-4 space-y-2">
                               {[
-                                { label: "Paired t-test", value: "p = 0.02 ✓" },
-                                { label: "Cohen's d (Effect Size)", value: "0.72 (Medium)" },
-                                { label: "R² Score", value: "0.88" },
-                                { label: "RMSE", value: "4.32" },
-                                { label: "Cross-Validation", value: "5-fold avg 84%" },
-                                { label: "Continuous Update", value: "↻ Feedback Loop Active" },
+                                { key: "ttest", value: "p = 0.02 ✓" },
+                                { key: "cohen", value: "0.72 (Medium)" },
+                                { key: "r2", value: "0.88" },
+                                { key: "rmse", value: "4.32" },
+                                { key: "crossVal", value: "5-fold avg 84%" },
+                                { key: "continuous", value: "↻ Feedback Loop Active" },
                               ].map(s => (
-                                <div key={s.label} className="flex justify-between text-xs border-b border-violet-200/60 pb-1 last:border-0 last:pb-0">
-                                  <span className="text-muted-foreground">{s.label}</span>
+                                <div key={s.key} className="flex justify-between text-xs border-b border-violet-200/60 pb-1 last:border-0 last:pb-0">
+                                  <span className="text-muted-foreground">{t(`lesAnalytics:statsEval.${s.key}`)}</span>
                                   <span className="font-semibold text-violet-800 dark:text-violet-300">{s.value}</span>
                                 </div>
                               ))}
@@ -545,9 +556,9 @@ export default function LESAnalyticsDashboard() {
           <Card className="border-dashed text-center py-10">
             <CardContent>
               <Layers className="h-10 w-10 mx-auto text-muted-foreground/40 mb-4" />
-              <p className="text-muted-foreground text-sm mb-4">Student data loaded. Run the ML pipeline to see LES score, risk level, and AI advisory.</p>
+              <p className="text-muted-foreground text-sm mb-4">{t("lesAnalytics:idle.hint")}</p>
               <Button onClick={runPipeline} className="gap-2">
-                <Sparkles className="h-4 w-4" /> Run Hybrid ML Pipeline
+                <Sparkles className="h-4 w-4" /> {t("lesAnalytics:header.runHybrid")}
               </Button>
             </CardContent>
           </Card>

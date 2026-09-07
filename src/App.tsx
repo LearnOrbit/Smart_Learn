@@ -21,6 +21,12 @@ import LESAnalyticsDashboard from "./pages/LESAnalyticsDashboard";
 import LESDebug from "./pages/LESDebug";
 import Announcements from "./pages/Announcements";
 import QuestionPaperGenerator from "./pages/QuestionPaperGenerator";
+import AIAssessmentGenerator from "./pages/AIAssessmentGenerator";
+import AIQuizPage from "./pages/AIQuizPage";
+import CalendarPage from "./pages/CalendarPage";
+import EnrolledClasses from "./pages/EnrolledClasses";
+import ArchivedClasses from "./pages/ArchivedClasses";
+import SettingsPage from "./pages/SettingsPage";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 
@@ -51,6 +57,12 @@ const App = () => (
             <Route path="/chatbot" element={<ProtectedRoute><StudentChatbot /></ProtectedRoute>} />
             <Route path="/announcements" element={<ProtectedRoute><Announcements /></ProtectedRoute>} />
             <Route path="/question-paper" element={<ProtectedRoute><QuestionPaperGenerator /></ProtectedRoute>} />
+            <Route path="/ai-generator" element={<ProtectedRoute><AIAssessmentGenerator /></ProtectedRoute>} />
+            <Route path="/ai-quiz" element={<ProtectedRoute><AIQuizPage /></ProtectedRoute>} />
+            <Route path="/calendar" element={<ProtectedRoute><CalendarPage /></ProtectedRoute>} />
+            <Route path="/enrolled" element={<ProtectedRoute><EnrolledClasses /></ProtectedRoute>} />
+            <Route path="/archived" element={<ProtectedRoute><ArchivedClasses /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

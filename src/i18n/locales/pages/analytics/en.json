@@ -1,0 +1,94 @@
+{
+  "teacher": {
+    "title": "Student Analytics",
+    "description": "View all students, enter marks, attendance and performance data",
+    "stats": {
+      "totalStudents": "Total Students",
+      "marksEntered": "Marks Entered",
+      "atRisk": "At Risk",
+      "classAverage": "Class Average"
+    },
+    "search": "Search students by name or email...",
+    "empty": {
+      "noStudents": "No students yet",
+      "noStudentsDesc": "Students will appear here once they sign up.",
+      "noMatching": "No matching students",
+      "noMatchingDesc": "Try a different search term."
+    },
+    "row": {
+      "average": "Average",
+      "noData": "No data",
+      "edit": "Edit",
+      "enterMarks": "Enter Marks",
+      "analytics": "Analytics",
+      "deleteConfirm": "Delete {{name}}? This will remove all their submissions and data permanently."
+    },
+    "metrics": {
+      "marks": "Marks",
+      "attendance": "Attendance",
+      "internals": "Internals",
+      "lab": "Lab",
+      "assignments": "Assignments",
+      "studyHrs": "Study hrs/wk",
+      "mastery": "Mastery",
+      "noDataHint": "No performance data entered yet. Click \"Enter Marks\" to add."
+    },
+    "remarks": "Remarks",
+    "dialog": {
+      "editTitle": "Edit Marks — {{name}}",
+      "enterTitle": "Enter Marks — {{name}}",
+      "fields": {
+        "marks": "Student Marks (0-100)",
+        "attendance": "Attendance (0-100)",
+        "internals": "Internal Assessments (0-20)",
+        "lab": "Lab Performance (0-25)",
+        "assignments": "Assignment Scores (0-10)",
+        "studyHours": "Study Hours / Week",
+        "mastery": "Concept Mastery (0-100)"
+      },
+      "teacherRemarks": "Teacher Remarks",
+      "remarksPlaceholder": "Optional notes...",
+      "save": "Save Performance Data",
+      "saving": "Saving..."
+    },
+    "toasts": {
+      "saved": "Saved!",
+      "savedDesc": "Student performance updated.",
+      "deleted": "Student deleted",
+      "error": "Error",
+      "saveFailed": "Failed to save",
+      "deleteFailed": "Failed to delete student"
+    },
+    "risk": {
+      "low": "Low Risk",
+      "moderate": "Moderate",
+      "high": "High Risk"
+    }
+  },
+  "student": {
+    "title": "My Analytics",
+    "description": "Your performance data as entered by your teacher",
+    "metrics": {
+      "marks": "Marks",
+      "attendance": "Attendance",
+      "internals": "Internals",
+      "lab": "Lab",
+      "assignments": "Assignments",
+      "studyHrs": "Study hrs/wk",
+      "mastery": "Mastery",
+      "average": "Average"
+    },
+    "overall": "Overall Status",
+    "averageLabel": "Average: {{pct}}%",
+    "teacherRemarks": "Teacher Remarks",
+    "noData": {
+      "title": "No Performance Data Yet",
+      "desc": "Your teacher has not entered your marks yet. Once they do, your analytics will appear here automatically."
+    },
+    "risk": {
+      "low": "Low Risk",
+      "moderate": "Moderate",
+      "high": "High Risk"
+    }
+  }
+}

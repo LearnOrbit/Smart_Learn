@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { motion } from "framer-motion";
 import { apiClient } from "@/integrations/api/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -10,6 +11,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCard, StatCardGrid } from "@/components/ui/StatCard";
+import { StaggerContainer, StaggerItem, AnimatedPageSection } from "@/components/ui/AnimatedPage";
 import { Grid3X3, Trash2, Lightbulb, BookMarked, Target, Link2, AlertCircle, Upload, FileText, Sparkles, Loader2 } from "lucide-react";
 
 /* ─── Types ─────────────────────────────────────────────────── */
@@ -620,20 +624,15 @@ export default function COPOMapping() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold" style={{ fontFamily: "var(--font-display)" }}>
-              Outcome Mapping
-            </h2>
-            <p className="text-muted-foreground text-sm mt-1">
-              Map Learning Outcomes → Course Outcomes (subject-specific) &nbsp;|&nbsp; Map Course Outcomes → Program Outcomes (POs are global)
-            </p>
-          </div>
-          
-          <Button onClick={() => setImportModalOpen(true)} className="gap-2 shrink-0 bg-violet-600 hover:bg-violet-700 text-white">
-            <Sparkles className="h-4 w-4" /> Smart PDF Import
-          </Button>
-        </div>
+        <PageHeader
+          title="Outcome Mapping"
+          description="Map Learning Outcomes → Course Outcomes (subject-specific) | Map Course Outcomes → Program Outcomes (POs are global)"
+          action={
+            <Button onClick={() => setImportModalOpen(true)} className="gap-2 shrink-0 bg-violet-600 hover:bg-violet-700 text-white">
+              <Sparkles className="h-4 w-4" /> Smart PDF Import
+            </Button>
+          }
+        />
 
         {/* Modal for PDF Import */}
         <Dialog open={importModalOpen} onOpenChange={setImportModalOpen}>
@@ -720,23 +719,29 @@ export default function COPOMapping() {
         </Dialog>
 
         {/* Stats strip */}
-        <div className="grid grid-cols-3 gap-4">
-          {[
-            { label: "Program Outcomes", value: pos.length, icon: Target, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/20" },
-            { label: "Course Outcomes", value: cos.length, icon: BookMarked, color: "text-violet-600", bg: "bg-violet-50 dark:bg-violet-950/20" },
-            { label: "Learning Outcomes", value: los.length, icon: Lightbulb, color: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-950/20" },
-          ].map(s => (
-            <Card key={s.label} className={`${s.bg} border-0`}>
-              <CardContent className="pt-4 pb-4 flex items-center gap-3">
-                <s.icon className={`h-6 w-6 ${s.color}`} />
-                <div>
-                  <p className={`text-xl font-bold ${s.color}`}>{s.value}</p>
-                  <p className="text-xs text-muted-foreground">{s.label}</p>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <StatCardGrid columns={3}>
+          <StatCard
+            title="Program Outcomes"
+            value={pos.length}
+            description="Global graduate attributes"
+            icon={<Target className="h-5 w-5" />}
+            iconBg="bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300"
+          />
+          <StatCard
+            title="Course Outcomes"
+            value={cos.length}
+            description="Subject-specific milestones"
+            icon={<BookMarked className="h-5 w-5" />}
+            iconBg="bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-300"
+          />
+          <StatCard
+            title="Learning Outcomes"
+            value={los.length}
+            description="Granular instructional objectives"
+            icon={<Lightbulb className="h-5 w-5" />}
+            iconBg="bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-300"
+          />
+        </StatCardGrid>
 
         {/* Tabs */}
         <Tabs defaultValue="co-lo">

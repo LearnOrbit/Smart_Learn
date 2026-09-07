@@ -1,0 +1,44 @@
+{
+  "header": {
+    "title": "घोषणाएँ",
+    "teacherSub": "अपने सभी छात्रों को दिखने वाले अपडेट पोस्ट करें",
+    "studentSub": "आपके शिक्षकों से अपडेट"
+  },
+  "form": {
+    "titlePlaceholder": "शीर्षक (वैकल्पिक)",
+    "messagePlaceholder": "अपनी कक्षा के लिए कुछ घोषित करें…",
+    "cancel": "रद्द करें",
+    "post": "पोस्ट करें",
+    "posting": "पोस्ट हो रहा है…"
+  },
+  "card": {
+    "pinned": "📌 पिन किया गया",
+    "unpin": "अनपिन करें",
+    "pinToTop": "शीर्ष पर पिन करें",
+    "delete": "हटाएँ",
+    "showLess": "कम दिखाएँ",
+    "readMore": "और पढ़ें",
+    "addComment": "💬  टिप्पणी जोड़ें",
+    "timeAgo": {
+      "today": "आज",
+      "yesterday": "कल",
+      "daysAgo": "{{count}} दिन पहले"
+    }
+  },
+  "sections": {
+    "pinned": "पिन किए गए",
+    "recent": "हाल के"
+  },
+  "empty": {
+    "noAnnouncements": "अभी तक कोई घोषणा नहीं",
+    "teacherHint": "अपने छात्रों को सूचित करने के लिए ऊपर कुछ पोस्ट करें"
+  },
+  "loading": "घोषणाएँ लोड हो रही हैं…",
+  "toasts": {
+    "posted": "घोषणा पोस्ट हो गई!",
+    "postFailed": "पोस्ट करने में विफल",
+    "deleteFailed": "हटाने में विफल",
+    "updateFailed": "अपडेट करने में विफल",
+    "unknownError": "अज्ञात त्रुटि"
+  }
+}

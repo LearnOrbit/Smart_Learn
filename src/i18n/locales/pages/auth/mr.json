@@ -1,0 +1,38 @@
+{
+  "tagline": "शैक्षणिक व्यवस्थापन प्रणाली",
+  "signIn": "साइन इन",
+  "createAccount": "खाते तयार करा",
+  "signInDescription": "आपल्या डॅशबोर्डमध्ये प्रवेश करण्यासाठी आपले क्रेडेन्शियल्स प्रविष्ट करा",
+  "createAccountDescription": "प्रारंभ करण्यासाठी आपले तपशील भरा",
+  "fullName": "पूर्ण नाव",
+  "fullNamePlaceholder": "जॉन डो",
+  "iAmA": "मी आहे",
+  "student": "विद्यार्थी",
+  "teacher": "शिक्षक",
+  "email": "ईमेल",
+  "emailPlaceholder": "tumhi@example.com",
+  "password": "पासवर्ड",
+  "passwordPlaceholder": "••••••••",
+  "minChars": "किमान 8 वर्ण",
+  "confirmPassword": "पासवर्ड पुन्हा प्रविष्ट करा",
+  "passwordsMatch": "✓ पासवर्ड जुळतात",
+  "passwordsDoNotMatch": "✗ पासवर्ड जुळत नाहीत",
+  "pleaseWait": "कृपया प्रतीक्षा करा...",
+  "signInCta": "साइन इन करा",
+  "createAccountCta": "खाते तयार करा",
+  "noAccount": "खाते नाही?",
+  "haveAccount": "आधीच खाते आहे?",
+  "signUp": "साइन अप",
+  "errors": {
+    "title": "त्रुटी",
+    "missingCredentials": "कृपया ईमेल आणि पासवर्ड दोन्ही प्रविष्ट करा",
+    "missingFields": "कृपया सर्व फील्ड भरा",
+    "passwordTooShort": "पासवर्ड किमान 8 वर्णांचा असावा",
+    "passwordMismatch": "पासवर्ड जुळत नाहीत",
+    "unexpected": "एक अनपेक्षित त्रुटी आली"
+  },
+  "success": {
+    "accountCreatedTitle": "खाते तयार झाले!",
+    "accountCreatedDescription": "आता तुम्ही आपल्या क्रेडेन्शियल्ससह साइन इन करू शकता"
+  }
+}

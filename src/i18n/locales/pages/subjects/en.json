@@ -1,0 +1,51 @@
+{
+  "header": {
+    "title": "Subjects",
+    "description": "Manage course subjects and their CO linkages"
+  },
+  "buttons": {
+    "newSubject": "New Subject",
+    "createSubject": "Create Subject",
+    "creating": "Creating..."
+  },
+  "form": {
+    "createTitle": "Create Subject",
+    "code": "Code",
+    "codePlaceholder": "e.g. CS101",
+    "name": "Name",
+    "namePlaceholder": "e.g. Data Structures",
+    "description": "Description",
+    "descriptionPlaceholder": "Description..."
+  },
+  "tabs": {
+    "subjects": "Subjects",
+    "coLinkage": "CO Linkage"
+  },
+  "list": {
+    "loading": "Loading...",
+    "emptyTitle": "No subjects yet. Create your first one!",
+    "noDescription": "No description"
+  },
+  "coLink": {
+    "selectSubject": "Select a Subject",
+    "emptySubjects": "No subjects yet.",
+    "emptyCoListTitle": "Select a subject to link Course Outcomes",
+    "emptyCoListDesc": "Pick a subject on the left to manage its COs.",
+    "noCos": "No COs defined. Go to Outcomes Manager first.",
+    "cardTitle": "COs for {{code}}",
+    "cardDescription": "Toggle COs to link/unlink them to this subject. Linked COs will appear in the Question Paper Generator.",
+    "linked": "Linked",
+    "notLinked": "Not linked",
+    "summary_one": "{{count}} CO linked to {{code}}. These will appear as options in the Question Paper Generator.",
+    "summary_other": "{{count}} COs linked to {{code}}. These will appear as options in the Question Paper Generator."
+  },
+  "toasts": {
+    "created": "Subject created!",
+    "deleted": "Subject deleted",
+    "errorTitle": "Error",
+    "coLinked": "CO linked to subject!",
+    "linkFailed": "Link failed",
+    "coUnlinked": "CO unlinked",
+    "unlinkFailed": "Unlink failed"
+  }
+}

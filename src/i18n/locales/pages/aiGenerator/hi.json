@@ -1,0 +1,142 @@
+{
+  "header": {
+    "title": "AI मूल्यांकन जनरेटर",
+    "description": "AI से प्रश्न, MCQ और क्विज़ बनाएँ। OpenAI API कुंजी सर्वर पर रहती है — आपका ब्राउज़र उसे कभी नहीं देखता।",
+    "teachersOnlyTitle": "AI मूल्यांकन जनरेटर",
+    "teachersOnlyDesc": "यह सुविधा केवल शिक्षकों के लिए है।"
+  },
+  "intro": {
+    "title": "यह कैसे काम करता है",
+    "body": "एक टैब चुनें: वर्णनात्मक प्रश्नों के लिए प्रश्न और उत्तर, 4-विकल्पीय बहुविकल्प के लिए MCQ, या सहेजे गए MCQ को क्विज़ में जोड़ने के लिए क्विज़। जनरेशन किसी विषय, आपके द्वारा पेस्ट किए गए अध्ययन नोट, या आपके द्वारा अपलोड किए गए दस्तावेज़ (PDF / छवि — हमारे मौजूदा OCR का उपयोग करता है) पर आधारित हो सकता है।"
+  },
+  "tabs": {
+    "qa": "प्रश्न और उत्तर",
+    "mcq": "MCQ",
+    "quiz": "क्विज़"
+  },
+  "gate": {
+    "title": "केवल शिक्षक",
+    "description": "AI से प्रश्न, MCQ और क्विज़ बनाने के लिए शिक्षक के रूप में साइन इन करें।"
+  },
+  "form": {
+    "generationSource": "जनरेशन स्रोत",
+    "topic": "विषय",
+    "topicPlaceholder": "जैसे, न्यूटन के गति के नियम",
+    "subjectLabel": "विषय (वैकल्पिक)",
+    "subjectPlaceholder": "विषय चुनें",
+    "coLabel": "पाठ्यक्रम परिणाम (वैकल्पिक)",
+    "coPlaceholder": "CO चुनें",
+    "difficulty": "कठिनाई",
+    "marksPerQ": "अंक / प्रश्न",
+    "countLabel": "संख्या (1–20)",
+    "studyMaterial": "अध्ययन सामग्री",
+    "studyMaterialPlaceholder": "अपने नोट्स या सिलेबस का पाठ यहाँ पेस्ट करें…",
+    "documentLabel": "दस्तावेज़ (PDF या छवि)",
+    "chooseFile": "फ़ाइल चुनें",
+    "extractedHint": "पिछले अपलोड से {{count}} अक्षर निकाले गए।",
+    "generating": "बनाया जा रहा है…",
+    "generateQA": "Q&A बनाएँ",
+    "generateMCQ": "MCQ बनाएँ"
+  },
+  "source": {
+    "topicLabel": "विषय",
+    "topicDesc": "केवल विषय नाम से जनरेट करें",
+    "syllabusLabel": "अध्ययन सामग्री",
+    "syllabusDesc": "आपके द्वारा पेस्ट किए गए अध्ययन नोट से जनरेट करें",
+    "documentLabel": "अपलोड किया गया दस्तावेज़",
+    "documentDesc": "PDF या छवि (OCR) से जनरेट करें"
+  },
+  "difficulty": {
+    "easy": "आसान",
+    "medium": "मध्यम",
+    "hard": "कठिन"
+  },
+  "regenDialog": {
+    "title": "प्रश्न पुनः बनाएँ",
+    "description": "AI को बताएँ कि प्रश्न को कैसे बदलना है। विषय, CO और कठिनाई वही रहेगी।",
+    "original": "मूल:",
+    "placeholder": "जैसे, इसे कठिन बनाएँ, कोड उदाहरण जोड़ें, अनुप्रयोगों पर ध्यान दें…",
+    "cancel": "रद्द करें",
+    "regenerate": "पुनः बनाएँ"
+  },
+  "qaCard": {
+    "editingBadge": "संपादन #{{index}}",
+    "cancel": "रद्द करें",
+    "done": "हो गया",
+    "questionLabel": "प्रश्न",
+    "answerLabel": "उत्तर",
+    "difficultyLabel": "कठिनाई",
+    "bloomLabel": "ब्लूम",
+    "marksLabel": "अंक",
+    "bloomPlaceholder": "—",
+    "saveEdits": "संपादन सहेजें",
+    "editTitle": "संपादित करें",
+    "regenTitle": "पुनः बनाएँ",
+    "saveTitle": "बैंक में सहेजें",
+    "deleteTitle": "हटाएँ",
+    "showAnswer": "उत्तर दिखाएँ"
+  },
+  "mcqCard": {
+    "mark_one": "अंक",
+    "mark_other": "अंक",
+    "addToQuizTitle": "क्विज़ में जोड़ें",
+    "showExplanation": "व्याख्या दिखाएँ"
+  },
+  "qaTab": {
+    "resultsHeader": "बनाए गए प्रश्न ({{count}})",
+    "clear": "साफ़ करें",
+    "emptyTitle": "अभी तक कोई प्रश्न नहीं",
+    "emptyDesc": "ऊपर दिया गया फ़ॉर्म भरें और Generate पर क्लिक करें। परिणाम यहाँ दिखाई देंगे — उन्हें संपादित करें, पुनः बनाएँ, या अपने बैंक में सहेजें।"
+  },
+  "mcqTab": {
+    "resultsHeader": "बनाए गए MCQ ({{count}})",
+    "clear": "साफ़ करें",
+    "emptyTitle": "अभी तक कोई MCQ नहीं",
+    "emptyDesc": "प्रत्येक MCQ ठीक 4 विकल्पों (A–D) और एक ही सही उत्तर के साथ बनाया जाता है। क्विज़ में उपयोग करने के लिए उन्हें अपने बैंक में सहेजें।"
+  },
+  "quizTab": {
+    "newQuiz": "नई क्विज़",
+    "titleLabel": "शीर्षक",
+    "titlePlaceholder": "जैसे, भौतिकी मध्यावधि क्विज़",
+    "descriptionLabel": "विवरण (वैकल्पिक)",
+    "pickHeader": "अपने बैंक से MCQ चुनें",
+    "selectedBadge": "{{count}} चयनित",
+    "createQuiz": "क्विज़ बनाएँ",
+    "emptyBankTitle": "आपके बैंक में कोई MCQ नहीं",
+    "emptyBankDesc": "पहले MCQ टैब से MCQ सहेजें, फिर उन्हें क्विज़ में जोड़ने के लिए वापस आएँ।",
+    "yourQuizzes": "आपकी क्विज़",
+    "noQuizzes": "अभी तक कोई क्विज़ नहीं।",
+    "questionsCount": "{{count}} प्रश्न",
+    "answerLabel": "उत्तर: {{letter}} · {{marks}} अंक"
+  },
+  "bank": {
+    "header": "आपका प्रश्न बैंक",
+    "savedBadge": "{{count}} सहेजे गए",
+    "qaLabel": "Q&A",
+    "mcqLabel": "MCQ",
+    "answerBadge": "उत्तर: {{letter}}"
+  },
+  "toasts": {
+    "pleaseEnterTopic": "कृपया एक विषय दर्ज करें।",
+    "couldntReadFile": "वह फ़ाइल नहीं पढ़ी जा सकी",
+    "generatedQuestions": "{{count}} प्रश्न बनाए गए",
+    "generationFailed": "जनरेशन विफल",
+    "tryAgain": "कृपया पुनः प्रयास करें।",
+    "savedToBank": "आपके प्रश्न बैंक में सहेजा गया",
+    "couldntSave": "सहेजा नहीं जा सका",
+    "questionRegenerated": "प्रश्न पुनः बनाया गया",
+    "couldntRegenerate": "पुनः नहीं बनाया जा सका",
+    "generatedMcqs": "{{count}} MCQ बनाए गए",
+    "savedToMcqBank": "MCQ बैंक में सहेजा गया",
+    "addedToMcqBank": "MCQ बैंक में जोड़ा गया",
+    "openQuizHint": "क्विज़ में जोड़ने के लिए क्विज़ टैब खोलें।",
+    "mcqRegenerated": "MCQ पुनः बनाया गया",
+    "quizTitleRequired": "कृपया क्विज़ का शीर्षक दर्ज करें।",
+    "pickAtLeastOne": "कम से कम एक MCQ चुनें।",
+    "quizCreated": "क्विज़ बनाई गई",
+    "quizCreatedDesc": "{{title}} तैयार है।",
+    "couldntCreateQuiz": "क्विज़ नहीं बनाई जा सकी",
+    "couldntOpenQuiz": "क्विज़ नहीं खोली जा सकी",
+    "couldntDelete": "हटाया नहीं जा सका"
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "title": "सेटिंग्स",
+  "description": "अपना खाता, प्राथमिकताएँ और सूचनाएँ प्रबंधित करें।",
+  "reset": "रीसेट करें",
+  "saveChanges": "परिवर्तन सहेजें",
+  "tabs": {
+    "profile": "प्रोफ़ाइल",
+    "notifications": "सूचनाएँ",
+    "appearance": "दिखावट",
+    "security": "सुरक्षा"
+  },
+  "profile": {
+    "infoTitle": "प्रोफ़ाइल जानकारी",
+    "infoDescription": "अपना व्यक्तिगत विवरण अपडेट करें। यह तरीका है जिससे प्लेटफ़ॉर्म पर अन्य लोग आपको देखेंगे।",
+    "yourName": "आपका नाम",
+    "active": "सक्रिय",
+    "fullName": "पूरा नाम",
+    "fullNamePlaceholder": "अपना पूरा नाम दर्ज करें",
+    "email": "ईमेल",
+    "emailPlaceholder": "aap@example.com",
+    "emailHelp": "ईमेल आपके खाता प्रदाता द्वारा प्रबंधित है।",
+    "bio": "परिचय",
+    "bioPlaceholder": "अपने बारे में कुछ बताएँ…",
+    "privacyTitle": "गोपनीयता",
+    "privacyDescription": "नियंत्रित करें कि आपकी प्रोफ़ाइल और गतिविधि कौन देख सकता है।",
+    "profileVisibility": "प्रोफ़ाइल दृश्यता",
+    "visibilityPublic": "प्लेटफ़ॉर्म पर कोई भी",
+    "visibilityClassmates": "केवल आपके सहपाठी",
+    "visibilityPrivate": "केवल आप"
+  },
+  "notifications": {
+    "emailTitle": "ईमेल सूचनाएँ",
+    "emailDescription": "चुनें कि हम आपको किस बारे में ईमेल करें।",
+    "emailItem": "ईमेल सूचनाएँ",
+    "emailItemDesc": "ईमेल के माध्यम से अपडेट प्राप्त करें",
+    "assignmentReminders": "असाइनमेंट रिमाइंडर",
+    "assignmentRemindersDesc": "समय सीमा से पहले रिमाइंडर प्राप्त करें",
+    "announcementAlerts": "घोषणा सूचनाएँ",
+    "announcementAlertsDesc": "जब शिक्षक घोषणाएँ पोस्ट करें",
+    "weeklyDigest": "साप्ताहिक सारांश",
+    "weeklyDigestDesc": "हर सोमवार को आपके सप्ताह का सारांश",
+    "pushTitle": "पुश सूचनाएँ",
+    "pushDescription": "आपके ब्राउज़र में रीयल-टाइम अलर्ट।",
+    "browserPush": "ब्राउज़र पुश सूचनाएँ",
+    "browserPushDesc": "जब Smart Learn फ़ोकस में न हो तब भी सूचनाएँ दिखाएँ"
+  },
+  "appearance": {
+    "themeTitle": "थीम",
+    "themeDescription": "अपने लिए सही दिखावट चुनें।",
+    "themeMode": "थीम मोड",
+    "themeModeDesc": "लाइट, डार्क के बीच स्विच करें या सिस्टम का अनुसरण करें।"
+  },
+  "security": {
+    "passwordTitle": "पासवर्ड",
+    "passwordDescription": "अपना खाता सुरक्षित रखने के लिए नियमित रूप से पासवर्ड बदलें।",
+    "currentPassword": "वर्तमान पासवर्ड",
+    "newPassword": "नया पासवर्ड",
+    "newPasswordPlaceholder": "कम से कम 8 अक्षर",
+    "confirmNewPassword": "नए पासवर्ड की पुष्टि करें",
+    "confirmNewPasswordPlaceholder": "नया पासवर्ड दोबारा दर्ज करें",
+    "updatePassword": "पासवर्ड अपडेट करें",
+    "sessionTitle": "सत्र",
+    "sessionDescription": "अपना सक्रिय सत्र प्रबंधित करें।",
+    "signOut": "साइन आउट",
+    "dangerTitle": "खतरा क्षेत्र",
+    "dangerDescription": "अपरिवर्तनीय क्रियाएँ। कृपया सुनिश्चित हों।",
+    "deleteAccount": "खाता हटाएँ"
+  },
+  "toasts": {
+    "saved": "सेटिंग्स सहेजी गईं",
+    "savedDescription": "आपके परिवर्तन लागू कर दिए गए हैं।",
+    "reset": "सेटिंग्स डिफ़ॉल्ट पर रीसेट हो गईं",
+    "signedOut": "साइन आउट हो गया",
+    "deleteConfirm": "खाता हटाएँ? यह क्रिया पूर्ववत नहीं की जा सकती।",
+    "deleteRequested": "खाता हटाने का अनुरोध किया गया",
+    "deleteRequestedDescription": "खाता हटाना पूरा करने के लिए कृपया सपोर्ट से संपर्क करें।"
+  }
+}

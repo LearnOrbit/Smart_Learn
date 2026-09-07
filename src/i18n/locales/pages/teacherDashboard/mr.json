@@ -1,0 +1,131 @@
+{
+  "header": {
+    "title": "पुन्हा स्वागत आहे, {{name}}",
+    "description": "आपले वर्ग, असाइनमेंट आणि घोषणा एका ठिकाणी व्यवस्थापित करा",
+    "createClass": "वर्ग तयार करा"
+  },
+  "stats": {
+    "totalClasses": "एकूण वर्ग",
+    "activeClassrooms": "सक्रिय वर्ग",
+    "studentsEnrolled": "नावनोंदणीकृत विद्यार्थी",
+    "acrossAllClasses": "सर्व वर्गांमध्ये",
+    "activeAssignments": "सक्रिय असाइनमेंट",
+    "drafts": "{{count}} मसुदे",
+    "pendingRequests": "प्रलंबित विनंत्या",
+    "awaitingApproval": "आपल्या मंजुईसाठी"
+  },
+  "classes": {
+    "sectionTitle": "आपले वर्ग",
+    "sectionDescription": "घोषणा, असाइनमेंट आणि साहित्य पाहण्यासाठी वर्गावर क्लिक करा",
+    "emptyTitle": "अद्याप कोणताही वर्ग नाही",
+    "emptyDescription": "असाइनमेंट व्यवस्थापित करणे आणि विद्यार्थ्यांशी जोडणे सुरू करण्यासाठी आपला पहिला वर्ग तयार करा.",
+    "emptyAction": "आपला पहिला वर्ग तयार करा",
+    "noSubject": "विषय सेट नाही",
+    "pending": "{{count}} प्रलंबित"
+  },
+  "classActions": {
+    "copyCode": "कोड कॉपी करा",
+    "editDetails": "तपशील संपादित करा",
+    "delete": "हटवा"
+  },
+  "tabs": {
+    "announcements": "घोषणा",
+    "assignments": "असाइनमेंट",
+    "requests": "विनंत्या",
+    "materials": "साहित्य"
+  },
+  "banner": {
+    "students": "विद्यार्थी",
+    "code": "कोड"
+  },
+  "announcements": {
+    "titlePlaceholder": "घोषणा शीर्षक (पर्यायी)",
+    "writeMessage": "{{name}} साठी संदेश लिहा...",
+    "cancel": "रद्द करा",
+    "sendToClass": "वर्गाला पाठवा",
+    "lastSent": "शेवटचे पाठवले",
+    "history": "इतिहास",
+    "emptyForClass": "या वर्गासाठी अद्याप कोणतीही घोषणा नाही.",
+    "trigger": "{{name}} ला काहीतरी घोषित करा...",
+    "latest": "नवीनतम",
+    "globalStream": "जागतिक स्ट्रीम",
+    "announceToAll": "सर्वांना घोषित करा",
+    "globalPlaceholderTitle": "घोषणा शीर्षक (पर्यायी)",
+    "globalPlaceholder": "आपल्या सर्व वर्गांना काहीतरी घोषित करा...",
+    "sendToAll": "सर्व वर्गांना पाठवा",
+    "globalTrigger": "आपल्या वर्गांना काहीतरी घोषित करा...",
+    "emptyGlobal": "जागतिक स्ट्रीम शांत आहे. असाइनमेंट तयार करा किंवा घोषणा पाठवा."
+  },
+  "toasts": {
+    "announcementSent": "घोषणा पाठवली!",
+    "failedToSend": "पाठवण्यात अयशस्वी",
+    "classCreated": "वर्ग '{{name}}' तयार केला! कोड: {{code}}",
+    "failedToCreateClass": "वर्ग तयार करण्यात अयशस्वी",
+    "classUpdated": "वर्ग अपडेट झाला!",
+    "classDeleteFailed": "वर्ग {{name}} हटवायचा?",
+    "materialUploaded": "साहित्य अपलोड झाले!",
+    "uploadFailed": "अपलोड अयशस्वी",
+    "graded": "ग्रेड दिला!",
+    "assignmentDeleted": "असाइनमेंट हटवले",
+    "error": "त्रुटी",
+    "codeCopied": "कोड कॉपी झाला!",
+    "deleteConfirm": "हे असाइनमेंट हटवायचे?"
+  },
+  "assignments": {
+    "noAssignmentsInClass": "या वर्गाला अद्याप कोणतेही असाइनमेंट पाठवलेले नाहीत.",
+    "createInstructions": "प्रकाशन करताना असाइनमेंट निर्माता वापरा आणि हा वर्ग निवडा.",
+    "publishedHeader": "प्रकाशित · विद्यार्थ्यांना दिसत आहे",
+    "draftsHeader": "मसुदे · अद्याप पाठवलेले नाहीत",
+    "noDrafts": "कोणत्याही प्रलंबित सामील होण्याच्या विनंत्या नाहीत.",
+    "requestedToJoin": "सामील होण्यासाठी विनंती केली",
+    "newAssignment": "आपण नवीन असाइनमेंट पोस्ट केले: {{title}}",
+    "due": "मुदत",
+    "marks": "गुण",
+    "posted": "पोस्ट केले",
+    "draft": "मसुदा",
+    "sentToStudents": "विद्यार्थ्यांना पाठवले"
+  },
+  "materials": {
+    "sectionTitle": "प्रकरण PDF / साहित्य",
+    "upload": "PDF अपलोड करा",
+    "empty": "अद्याप कोणतेही साहित्य अपलोड केलेले नाही",
+    "extractedText": "काढलेल्या मजकुराचे प्रतिनिधित्व."
+  },
+  "grading": {
+    "title": "विद्यार्थी सबमिशन",
+    "close": "बंद करा",
+    "empty": "या असाइनमेंटसाठी अद्याप कोणतीही सबमिशन नाहीत.",
+    "emptyDesc": "विद्यार्थी PDF अपलोड केल्यावर सबमिशन येथे दिसतील.",
+    "submitted": "सबमिट केले",
+    "viewPdf": "सबमिट केलेले PDF पहा",
+    "marks": "गुण",
+    "ocrTitle": "OCR द्वारे काढलेला मजकूर",
+    "marksPlaceholder": "गुण",
+    "gradePlaceholder": "ग्रेड (A+)",
+    "feedbackPlaceholder": "विद्यार्थ्यासाठी अभिप्राय"
+  },
+  "createClass": {
+    "title": "वर्ग तयार करा",
+    "nameLabel": "वर्गाचे नाव (आवश्यक)",
+    "namePlaceholder": "उदा. विज्ञान 101",
+    "sectionLabel": "विभाग",
+    "sectionPlaceholder": "उदा. सकाळची बॅच",
+    "subjectLabel": "विषय",
+    "subjectPlaceholder": "उदा. भौतिकशास्त्र",
+    "cancel": "रद्द करा",
+    "create": "तयार करा",
+    "tryAgain": "कृपया पुन्हा प्रयत्न करा."
+  },
+  "editClass": {
+    "title": "वर्ग तपशील संपादित करा",
+    "nameLabel": "वर्गाचे नाव (आवश्यक)",
+    "sectionLabel": "विभाग",
+    "subjectLabel": "विषय",
+    "cancel": "रद्द करा",
+    "save": "जतन करा"
+  },
+  "defaults": {
+    "teacher": "शिक्षक",
+    "user": "वापरकर्ता"
+  }
+}

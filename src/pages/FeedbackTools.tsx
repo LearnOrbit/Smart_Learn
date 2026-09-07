@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { apiClient } from "@/integrations/api/client";
+import { loadPageNamespace } from "@/i18n";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,6 +22,9 @@ interface AdvisoryPlan {
 
 export default function FeedbackTools() {
   const { toast } = useToast();
+  const { t } = useTranslation("pages");
+
+  useEffect(() => { void loadPageNamespace("feedback"); }, []);
 
   // Advisory plan form state
   const [studentName, setStudentName] = useState("");
@@ -49,7 +54,7 @@ export default function FeedbackTools() {
       if (error) throw error;
       return data as AdvisoryPlan;
     },
-    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("feedback:toasts.errorTitle"), description: e.message, variant: "destructive" }),
   });
 
   // CO attainment data for improvement suggestions
@@ -69,10 +74,10 @@ export default function FeedbackTools() {
       <div className="space-y-6">
         <div>
           <h2 className="text-2xl font-bold" style={{ fontFamily: "var(--font-display)" }}>
-            Feedback & Improvement Tools
+            {t("feedback:header.title")}
           </h2>
           <p className="text-muted-foreground">
-            AI-powered advisory plans, gap analysis, and improvement suggestions
+            {t("feedback:header.description")}
           </p>
         </div>
 
@@ -80,11 +85,11 @@ export default function FeedbackTools() {
           <TabsList>
             <TabsTrigger value="advisory">
               <Brain className="h-4 w-4 mr-1.5" />
-              Advisory Plan
+              {t("feedback:tabs.advisory")}
             </TabsTrigger>
             <TabsTrigger value="improvement">
               <TrendingUp className="h-4 w-4 mr-1.5" />
-              Improvement Insights
+              {t("feedback:tabs.improvement")}
             </TabsTrigger>
           </TabsList>
 
@@ -94,10 +99,10 @@ export default function FeedbackTools() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Brain className="h-5 w-5" />
-                  Generate Advisory Plan
+                  {t("feedback:advisoryForm.title")}
                 </CardTitle>
                 <CardDescription>
-                  Enter student performance data and weak areas to generate an AI-powered personalised advisory plan.
+                  {t("feedback:advisoryForm.description")}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -110,32 +115,32 @@ export default function FeedbackTools() {
                 >
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label>Student Name</Label>
-                      <Input value={studentName} onChange={(e) => setStudentName(e.target.value)} placeholder="e.g. Alice" />
+                      <Label>{t("feedback:advisoryForm.studentName")}</Label>
+                      <Input value={studentName} onChange={(e) => setStudentName(e.target.value)} placeholder={t("feedback:advisoryForm.studentNamePlaceholder")} />
                     </div>
                     <div className="space-y-2">
-                      <Label>Weak Concepts (comma separated)</Label>
+                      <Label>{t("feedback:advisoryForm.weakConcepts")}</Label>
                       <Input
                         value={weakConcepts}
                         onChange={(e) => setWeakConcepts(e.target.value)}
-                        placeholder="e.g. Data Structures, Algorithm Design"
+                        placeholder={t("feedback:advisoryForm.weakConceptsPlaceholder")}
                       />
                     </div>
                   </div>
 
-                  <p className="text-sm font-medium text-muted-foreground">Performance Metrics</p>
+                  <p className="text-sm font-medium text-muted-foreground">{t("feedback:advisoryForm.performanceMetrics")}</p>
                   <div className="grid gap-3 sm:grid-cols-4">
                     {[
-                      { label: "Marks (0-100)", val: perfMarks, set: setPerfMarks, max: 100 },
-                      { label: "Attendance (0-100)", val: perfAttendance, set: setPerfAttendance, max: 100 },
-                      { label: "Internal Assessments (0-20)", val: perfInternal, set: setPerfInternal, max: 20 },
-                      { label: "Lab Performance (0-25)", val: perfLab, set: setPerfLab, max: 25 },
-                      { label: "Assignment Scores (0-10)", val: perfAssignments, set: setPerfAssignments, max: 10 },
-                      { label: "Study Hours/day", val: perfStudyHours, set: setPerfStudyHours, max: 24 },
-                      { label: "Concept Mastery (0-100)", val: perfMastery, set: setPerfMastery, max: 100 },
+                      { key: "marks", val: perfMarks, set: setPerfMarks, max: 100 },
+                      { key: "attendance", val: perfAttendance, set: setPerfAttendance, max: 100 },
+                      { key: "internal", val: perfInternal, set: setPerfInternal, max: 20 },
+                      { key: "lab", val: perfLab, set: setPerfLab, max: 25 },
+                      { key: "assignments", val: perfAssignments, set: setPerfAssignments, max: 10 },
+                      { key: "studyHours", val: perfStudyHours, set: setPerfStudyHours, max: 24 },
+                      { key: "mastery", val: perfMastery, set: setPerfMastery, max: 100 },
                     ].map((f) => (
-                      <div key={f.label} className="space-y-1">
-                        <Label className="text-xs">{f.label}</Label>
+                      <div key={f.key} className="space-y-1">
+                        <Label className="text-xs">{t(`feedback:advisoryForm.${f.key}`)}</Label>
                         <Input type="number" value={f.val} onChange={(e) => f.set(e.target.value)} min={0} max={f.max} />
                       </div>
                     ))}
@@ -145,10 +150,10 @@ export default function FeedbackTools() {
                     {advisoryMutation.isPending ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Generating...
+                        {t("feedback:advisoryForm.generating")}
                       </>
                     ) : (
-                      "Generate Plan"
+                      t("feedback:advisoryForm.generate")
                     )}
                   </Button>
                 </form>
@@ -158,16 +163,16 @@ export default function FeedbackTools() {
             {advisoryMutation.data && (
               <div className="grid gap-4 sm:grid-cols-2">
                 {[
-                  { title: "Study Plan", icon: BookOpen, content: advisoryMutation.data.study_plan },
-                  { title: "Concept Reinforcement", icon: Brain, content: advisoryMutation.data.concept_reinforcement },
-                  { title: "Mini Project", icon: TrendingUp, content: advisoryMutation.data.mini_project },
-                  { title: "Adaptive Schedule", icon: Calendar, content: advisoryMutation.data.adaptive_schedule },
-                ].map(({ title, icon: Icon, content }) => (
-                  <Card key={title}>
+                  { key: "studyPlan", icon: BookOpen, content: advisoryMutation.data.study_plan },
+                  { key: "conceptReinforcement", icon: Brain, content: advisoryMutation.data.concept_reinforcement },
+                  { key: "miniProject", icon: TrendingUp, content: advisoryMutation.data.mini_project },
+                  { key: "adaptiveSchedule", icon: Calendar, content: advisoryMutation.data.adaptive_schedule },
+                ].map(({ key, icon: Icon, content }) => (
+                  <Card key={key}>
                     <CardHeader className="pb-2">
                       <CardTitle className="text-base flex items-center gap-2">
                         <Icon className="h-4 w-4" />
-                        {title}
+                        {t(`feedback:resultCards.${key}`)}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -185,22 +190,22 @@ export default function FeedbackTools() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <TrendingUp className="h-5 w-5" />
-                  CO Attainment Insights
+                  {t("feedback:insights.title")}
                 </CardTitle>
                 <CardDescription>
-                  Automatically identifies course outcomes with low attainment and suggests areas for curriculum improvement.
+                  {t("feedback:insights.description")}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {coAttainment.length === 0 ? (
-                  <p className="text-muted-foreground text-sm">No CO attainment data yet. Grade assignments and compute scores first.</p>
+                  <p className="text-muted-foreground text-sm">{t("feedback:insights.noData")}</p>
                 ) : (
                   <>
                     {lowCOs.length > 0 ? (
                       <div className="space-y-3">
                         <div className="flex items-center gap-2 text-amber-600">
                           <AlertTriangle className="h-5 w-5" />
-                          <p className="font-medium">{lowCOs.length} Course Outcome(s) below 50% attainment</p>
+                          <p className="font-medium">{t("feedback:insights.belowThreshold", { count: lowCOs.length })}</p>
                         </div>
                         {lowCOs.map((co) => (
                           <Card key={co.co_code} className="border-amber-200 bg-amber-50/50">
@@ -213,12 +218,12 @@ export default function FeedbackTools() {
                                 <Badge variant="destructive">{co.avg_score?.toFixed(1)}%</Badge>
                               </div>
                               <div className="mt-3 text-sm text-muted-foreground space-y-1">
-                                <p className="font-medium text-foreground">Suggested Actions:</p>
+                                <p className="font-medium text-foreground">{t("feedback:insights.suggestedActions")}</p>
                                 <ul className="list-disc list-inside space-y-0.5">
-                                  <li>Review and revise teaching material for {co.co_code}</li>
-                                  <li>Add supplementary assignments targeting its {co.num_los} linked LO(s)</li>
-                                  <li>Consider tutorial sessions or additional practice</li>
-                                  <li>Use the Advisory Plan generator for at-risk students</li>
+                                  <li>{t("feedback:insights.action1", { co: co.co_code })}</li>
+                                  <li>{t("feedback:insights.action2", { count: co.num_los })}</li>
+                                  <li>{t("feedback:insights.action3")}</li>
+                                  <li>{t("feedback:insights.action4")}</li>
                                 </ul>
                               </div>
                             </CardContent>
@@ -228,8 +233,8 @@ export default function FeedbackTools() {
                     ) : (
                       <div className="text-center py-6 text-muted-foreground">
                         <TrendingUp className="h-10 w-10 mx-auto mb-2 text-green-500" />
-                        <p className="font-medium text-foreground">All COs are above 50% attainment!</p>
-                        <p className="text-sm">Keep monitoring as more submissions come in.</p>
+                        <p className="font-medium text-foreground">{t("feedback:insights.allGood")}</p>
+                        <p className="text-sm">{t("feedback:insights.allGoodSub")}</p>
                       </div>
                     )}
 
@@ -238,11 +243,11 @@ export default function FeedbackTools() {
                       <table className="w-full text-sm">
                         <thead className="bg-muted/50">
                           <tr>
-                            <th className="px-4 py-2 text-left font-medium">CO Code</th>
-                            <th className="px-4 py-2 text-left font-medium">Description</th>
-                            <th className="px-4 py-2 text-right font-medium">LOs</th>
-                            <th className="px-4 py-2 text-right font-medium">Avg Score</th>
-                            <th className="px-4 py-2 text-right font-medium">Status</th>
+                            <th className="px-4 py-2 text-left font-medium">{t("feedback:table.coCode")}</th>
+                            <th className="px-4 py-2 text-left font-medium">{t("feedback:table.description")}</th>
+                            <th className="px-4 py-2 text-right font-medium">{t("feedback:table.los")}</th>
+                            <th className="px-4 py-2 text-right font-medium">{t("feedback:table.avgScore")}</th>
+                            <th className="px-4 py-2 text-right font-medium">{t("feedback:table.status")}</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y">
@@ -254,13 +259,13 @@ export default function FeedbackTools() {
                               <td className="px-4 py-2 text-right">{co.avg_score !== null ? `${co.avg_score.toFixed(1)}%` : "—"}</td>
                               <td className="px-4 py-2 text-right">
                                 {co.avg_score === null ? (
-                                  <Badge variant="outline">No data</Badge>
+                                  <Badge variant="outline">{t("feedback:table.noData")}</Badge>
                                 ) : co.avg_score >= 70 ? (
-                                  <Badge className="bg-green-100 text-green-800">Strong</Badge>
+                                  <Badge className="bg-green-100 text-green-800">{t("feedback:table.strong")}</Badge>
                                 ) : co.avg_score >= 50 ? (
-                                  <Badge className="bg-yellow-100 text-yellow-800">Moderate</Badge>
+                                  <Badge className="bg-yellow-100 text-yellow-800">{t("feedback:table.moderate")}</Badge>
                                 ) : (
-                                  <Badge variant="destructive">At Risk</Badge>
+                                  <Badge variant="destructive">{t("feedback:table.atRisk")}</Badge>
                                 )}
                               </td>
                             </tr>

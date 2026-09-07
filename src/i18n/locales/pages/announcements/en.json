@@ -1,0 +1,44 @@
+{
+  "header": {
+    "title": "Announcements",
+    "teacherSub": "Post updates visible to all your students",
+    "studentSub": "Updates from your teachers"
+  },
+  "form": {
+    "titlePlaceholder": "Title (optional)",
+    "messagePlaceholder": "Announce something to your class…",
+    "cancel": "Cancel",
+    "post": "Post",
+    "posting": "Posting…"
+  },
+  "card": {
+    "pinned": "📌 Pinned",
+    "unpin": "Unpin",
+    "pinToTop": "Pin to top",
+    "delete": "Delete",
+    "showLess": "Show less",
+    "readMore": "Read more",
+    "addComment": "💬  Add comment",
+    "timeAgo": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "daysAgo": "{{count}} days ago"
+    }
+  },
+  "sections": {
+    "pinned": "Pinned",
+    "recent": "Recent"
+  },
+  "empty": {
+    "noAnnouncements": "No announcements yet",
+    "teacherHint": "Post something above to notify your students"
+  },
+  "loading": "Loading announcements…",
+  "toasts": {
+    "posted": "Announcement posted!",
+    "postFailed": "Failed to post",
+    "deleteFailed": "Failed to delete",
+    "updateFailed": "Failed to update",
+    "unknownError": "Unknown error"
+  }
+}
