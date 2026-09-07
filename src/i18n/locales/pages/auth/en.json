@@ -1,0 +1,38 @@
+{
+  "tagline": "Academic Management System",
+  "signIn": "Sign in",
+  "createAccount": "Create account",
+  "signInDescription": "Enter your credentials to access your dashboard",
+  "createAccountDescription": "Fill in your details to get started",
+  "fullName": "Full Name",
+  "fullNamePlaceholder": "John Doe",
+  "iAmA": "I am a",
+  "student": "Student",
+  "teacher": "Teacher",
+  "email": "Email",
+  "emailPlaceholder": "you@example.com",
+  "password": "Password",
+  "passwordPlaceholder": "••••••••",
+  "minChars": "Minimum 8 characters",
+  "confirmPassword": "Confirm Password",
+  "passwordsMatch": "✓ Passwords match",
+  "passwordsDoNotMatch": "✗ Passwords do not match",
+  "pleaseWait": "Please wait...",
+  "signInCta": "Sign In",
+  "createAccountCta": "Create Account",
+  "noAccount": "Don't have an account?",
+  "haveAccount": "Already have an account?",
+  "signUp": "Sign up",
+  "errors": {
+    "title": "Error",
+    "missingCredentials": "Please enter both email and password",
+    "missingFields": "Please fill in all fields",
+    "passwordTooShort": "Password must be at least 8 characters",
+    "passwordMismatch": "Passwords do not match",
+    "unexpected": "An unexpected error occurred"
+  },
+  "success": {
+    "accountCreatedTitle": "Account created!",
+    "accountCreatedDescription": "You can now sign in with your credentials"
+  }
+}

@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { apiClient } from "@/integrations/api/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { loadPageNamespace } from "@/i18n";
 import {
   Plus, Trash2, Target, Lightbulb, Upload,
   Loader2, ListTree, CheckCircle2, Search, FileText
@@ -27,6 +29,8 @@ interface DraftLO { code: string; description: string; co_code: string }
 export default function OutcomesManager() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { t } = useTranslation("pages");
+  useEffect(() => { void loadPageNamespace("outcomes"); }, []);
 
   // PO form
   const [poOpen, setPoOpen] = useState(false);
@@ -77,11 +81,11 @@ export default function OutcomesManager() {
   const listLOs = listSubjectId !== "all" ? los.filter(lo => { const p = cos.find(c => c.id === lo.course_outcome_id); return p?.code?.startsWith(listSubjectId.slice(0, 2)); }) : los;
 
   /* ── Mutations ── */
-  const createPO = useMutation({ mutationFn: async () => { const { error } = await apiClient.post("/program-outcomes", { code: poCode, description: poDesc }); if (error) throw error; }, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["program_outcomes"] }); setPoOpen(false); setPoCode(""); setPoDesc(""); toast({ title: "PO created!" }); }, onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }) });
+  const createPO = useMutation({ mutationFn: async () => { const { error } = await apiClient.post("/program-outcomes", { code: poCode, description: poDesc }); if (error) throw error; }, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["program_outcomes"] }); setPoOpen(false); setPoCode(""); setPoDesc(""); toast({ title: t("outcomes:toasts.poCreated") }); }, onError: (e: any) => toast({ title: t("outcomes:toasts.error"), description: e.message, variant: "destructive" }) });
   const deletePO = useMutation({ mutationFn: async (id: string) => { const { error } = await apiClient.delete(`/program-outcomes/${id}`); if (error) throw error; }, onSuccess: () => queryClient.invalidateQueries({ queryKey: ["program_outcomes"] }) });
-  const createCO = useMutation({ mutationFn: async () => { const { error } = await apiClient.post("/course-outcomes", { code: coCode, description: coDesc, program_outcome_id: coPoId === "none" ? null : coPoId }); if (error) throw error; }, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["course_outcomes"] }); setCoOpen(false); setCoCode(""); setCoDesc(""); toast({ title: "CO created!" }); }, onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }) });
+  const createCO = useMutation({ mutationFn: async () => { const { error } = await apiClient.post("/course-outcomes", { code: coCode, description: coDesc, program_outcome_id: coPoId === "none" ? null : coPoId }); if (error) throw error; }, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["course_outcomes"] }); setCoOpen(false); setCoCode(""); setCoDesc(""); toast({ title: t("outcomes:toasts.coCreated") }); }, onError: (e: any) => toast({ title: t("outcomes:toasts.error"), description: e.message, variant: "destructive" }) });
   const deleteCO = useMutation({ mutationFn: async (id: string) => { const { error } = await apiClient.delete(`/course-outcomes/${id}`); if (error) throw error; }, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["course_outcomes"] }); queryClient.invalidateQueries({ queryKey: ["learning_outcomes"] }); } });
-  const createLO = useMutation({ mutationFn: async () => { const { error } = await apiClient.post("/learning-outcomes", { code: loCode, description: loDesc, course_outcome_id: loCoId }); if (error) throw error; }, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["learning_outcomes"] }); setLoOpen(false); setLoCode(""); setLoDesc(""); setLoCoId(""); toast({ title: "LO created!" }); }, onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }) });
+  const createLO = useMutation({ mutationFn: async () => { const { error } = await apiClient.post("/learning-outcomes", { code: loCode, description: loDesc, course_outcome_id: loCoId }); if (error) throw error; }, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["learning_outcomes"] }); setLoOpen(false); setLoCode(""); setLoDesc(""); setLoCoId(""); toast({ title: t("outcomes:toasts.loCreated") }); }, onError: (e: any) => toast({ title: t("outcomes:toasts.error"), description: e.message, variant: "destructive" }) });
   const deleteLO = useMutation({ mutationFn: async (id: string) => { const { error } = await apiClient.delete(`/learning-outcomes/${id}`); if (error) throw error; }, onSuccess: () => queryClient.invalidateQueries({ queryKey: ["learning_outcomes"] }) });
 
   /* ════ STEP 1: Upload PDF ════ */
@@ -104,9 +108,9 @@ export default function OutcomesManager() {
       setRawText(text);
       setPdfFileName(file.name);
       setPdfLoaded(true);
-      toast({ title: "PDF loaded!", description: "Now enter the subject name to extract its COs and LOs." });
+      toast({ title: t("outcomes:toasts.pdfLoaded"), description: t("outcomes:toasts.pdfLoadedDesc") });
     } catch (err: any) {
-      toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+      toast({ title: t("outcomes:toasts.uploadFailed"), description: err.message, variant: "destructive" });
     } finally {
       setUploadLoading(false);
       e.target.value = "";
@@ -116,10 +120,10 @@ export default function OutcomesManager() {
   /* ════ STEP 2: Extract COs & LOs ════ */
   const handleExtract = () => {
     if (!searchSubjectName.trim()) {
-      toast({ title: "Enter a subject name first", variant: "destructive" }); return;
+      toast({ title: t("outcomes:toasts.enterSubjectFirst"), variant: "destructive" }); return;
     }
     if (!rawText) {
-      toast({ title: "Upload a PDF first", variant: "destructive" }); return;
+      toast({ title: t("outcomes:toasts.uploadPdfFirst"), variant: "destructive" }); return;
     }
     setSearching(true);
     setPreviewReady(false);
@@ -132,8 +136,8 @@ export default function OutcomesManager() {
 
       if (!lower.includes(keyword)) {
         toast({
-          title: "Subject not found",
-          description: `"${searchSubjectName}" not found in PDF. Try a shorter name.`,
+          title: t("outcomes:toasts.subjectNotFound"),
+          description: t("outcomes:toasts.subjectNotFoundDesc", { name: searchSubjectName }),
           variant: "destructive"
         });
         return;
@@ -370,7 +374,7 @@ export default function OutcomesManager() {
   /* ════ STEP 3: Save permanently ════ */
   const handleSave = async () => {
     if (extractedCOs.length === 0) {
-      toast({ title: "Nothing to save", variant: "destructive" }); return;
+      toast({ title: t("outcomes:toasts.nothingToSave"), variant: "destructive" }); return;
     }
     setSaving(true);
     try {
@@ -420,7 +424,7 @@ export default function OutcomesManager() {
       setExtractedLOs([]);
       setSearchSubjectName("");
     } catch (err: any) {
-      toast({ title: "Save failed", description: err.message, variant: "destructive" });
+      toast({ title: t("outcomes:toasts.saveFailed"), description: err.message, variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -451,7 +455,7 @@ export default function OutcomesManager() {
       setExtractedPOs(parsed);
       toast({ title: `Found ${parsed.length} POs`, description: "Review and save." });
     } catch (err: any) {
-      toast({ title: "Extraction failed", description: err.message, variant: "destructive" });
+      toast({ title: t("outcomes:toasts.extractionFailed"), description: err.message, variant: "destructive" });
     } finally {
       setPoExtracting(false);
       e.target.value = "";
@@ -464,12 +468,12 @@ export default function OutcomesManager() {
       for (const po of extractedPOs) {
         await apiClient.post("/program-outcomes", { code: po.code, description: po.description });
       }
-      toast({ title: "POs saved!", description: `${extractedPOs.length} Program Outcomes saved permanently.` });
+      toast({ title: t("outcomes:toasts.posSaved"), description: t("outcomes:toasts.posSavedDesc", { count: extractedPOs.length }) });
       queryClient.invalidateQueries({ queryKey: ["program_outcomes"] });
       setExtractedPOs([]);
       setPoPdfFileName("");
     } catch (err: any) {
-      toast({ title: "Save failed", description: err.message, variant: "destructive" });
+      toast({ title: t("outcomes:toasts.saveFailed"), description: err.message, variant: "destructive" });
     } finally {
       setPoImporting(false);
     }
@@ -481,10 +485,10 @@ export default function OutcomesManager() {
       <div className="space-y-6">
         <div>
           <h2 className="text-2xl font-bold" style={{ fontFamily: "var(--font-display)" }}>
-            Outcomes Management
+            {t("outcomes:title")}
           </h2>
           <p className="text-muted-foreground text-sm mt-1">
-            Upload a syllabus PDF, enter the subject name, and auto-extract COs &amp; LOs.
+            {t("outcomes:description")}
           </p>
         </div>
 
@@ -540,8 +544,8 @@ export default function OutcomesManager() {
                     <>
                       <Upload className="h-6 w-6 text-muted-foreground" />
                       <div>
-                        <p className="text-sm font-medium">Click to upload PDF</p>
-                        <p className="text-xs text-muted-foreground">Any syllabus or course document</p>
+                        <p className="text-sm font-medium">{t("outcomes:pdf.clickToUpload")}</p>
+                        <p className="text-xs text-muted-foreground">{t("outcomes:pdf.anySyllabus")}</p>
                       </div>
                     </>
                   )}
@@ -564,7 +568,7 @@ export default function OutcomesManager() {
               <CardContent>
                 <div className="flex gap-2">
                   <Input
-                    placeholder="e.g. System Programming, Cryptography…"
+                    placeholder={t("outcomes:pdf.subjectPlaceholder")}
                     value={searchSubjectName}
                     onChange={e => { setSearchSubjectName(e.target.value); setPreviewReady(false); }}
                     onKeyDown={e => e.key === "Enter" && handleExtract()}
@@ -577,7 +581,7 @@ export default function OutcomesManager() {
                   >
                     {searching
                       ? <><Loader2 className="h-4 w-4 animate-spin" />Searching…</>
-                      : <><Search className="h-4 w-4" />Extract</>
+                      : <><Search className="h-4 w-4" />{t("outcomes:pdf.extract")}</>
                     }
                   </Button>
                 </div>
@@ -665,7 +669,7 @@ export default function OutcomesManager() {
             <div>
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-3">
                 <div>
-                  <h3 className="font-semibold text-sm">Saved Outcomes</h3>
+                  <h3 className="font-semibold text-sm">{t("outcomes:pdf.savedOutcomes")}</h3>
                   <p className="text-xs text-muted-foreground">Permanently stored — delete only when needed</p>
                 </div>
                 <div className="flex flex-wrap gap-2 items-center">
@@ -678,21 +682,21 @@ export default function OutcomesManager() {
                   {/* Add CO manually */}
                   <Dialog open={coOpen} onOpenChange={setCoOpen}>
                     <DialogTrigger asChild>
-                      <Button variant="outline" size="sm"><Plus className="h-4 w-4 mr-1" />Add CO</Button>
+                      <Button variant="outline" size="sm"><Plus className="h-4 w-4 mr-1" />{t("outcomes:co.addCo")}</Button>
                     </DialogTrigger>
                     <DialogContent>
-                      <DialogHeader><DialogTitle>New Course Outcome</DialogTitle></DialogHeader>
+                      <DialogHeader><DialogTitle>{t("outcomes:co.newCo")}</DialogTitle></DialogHeader>
                       <form onSubmit={e => { e.preventDefault(); createCO.mutate(); }} className="space-y-4">
                         <div className="space-y-2">
-                          <Label>Code</Label>
-                          <Input value={coCode} onChange={e => setCoCode(e.target.value)} required placeholder="CO1" />
+                          <Label>{t("outcomes:co.code")}</Label>
+                          <Input value={coCode} onChange={e => setCoCode(e.target.value)} required placeholder={t("outcomes:co.codePlaceholder")} />
                         </div>
                         <div className="space-y-2">
                           <Label>Linked PO (optional)</Label>
                           <Select value={coPoId} onValueChange={setCoPoId}>
-                            <SelectTrigger><SelectValue placeholder="Select PO" /></SelectTrigger>
+                            <SelectTrigger><SelectValue placeholder={t("outcomes:co.selectPo")} /></SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="none">None</SelectItem>
+                              <SelectItem value="none">{t("outcomes:co.none")}</SelectItem>
                               {pos.map(p => <SelectItem key={p.id} value={p.id}>{p.code}</SelectItem>)}
                             </SelectContent>
                           </Select>
@@ -701,7 +705,7 @@ export default function OutcomesManager() {
                           <Label>Description</Label>
                           <Textarea value={coDesc} onChange={e => setCoDesc(e.target.value)} rows={3} />
                         </div>
-                        <Button type="submit" className="w-full" disabled={createCO.isPending}>Create CO</Button>
+                        <Button type="submit" className="w-full" disabled={createCO.isPending}>{t("outcomes:co.create")}</Button>
                       </form>
                     </DialogContent>
                   </Dialog>
@@ -709,19 +713,19 @@ export default function OutcomesManager() {
                   {/* Add LO manually */}
                   <Dialog open={loOpen} onOpenChange={setLoOpen}>
                     <DialogTrigger asChild>
-                      <Button variant="outline" size="sm"><Plus className="h-4 w-4 mr-1" />Add LO</Button>
+                      <Button variant="outline" size="sm"><Plus className="h-4 w-4 mr-1" />{t("outcomes:lo.addLo")}</Button>
                     </DialogTrigger>
                     <DialogContent>
-                      <DialogHeader><DialogTitle>New Learning Outcome</DialogTitle></DialogHeader>
+                      <DialogHeader><DialogTitle>{t("outcomes:lo.newLo")}</DialogTitle></DialogHeader>
                       <form onSubmit={e => { e.preventDefault(); createLO.mutate(); }} className="space-y-4">
                         <div className="space-y-2">
-                          <Label>Code</Label>
-                          <Input value={loCode} onChange={e => setLoCode(e.target.value)} required placeholder="LO1" />
+                          <Label>{t("outcomes:lo.code")}</Label>
+                          <Input value={loCode} onChange={e => setLoCode(e.target.value)} required placeholder={t("outcomes:lo.codePlaceholder")} />
                         </div>
                         <div className="space-y-2">
-                          <Label>Linked CO</Label>
+                          <Label>{t("outcomes:lo.linkedCo")}</Label>
                           <Select value={loCoId} onValueChange={setLoCoId}>
-                            <SelectTrigger><SelectValue placeholder="Select CO" /></SelectTrigger>
+                            <SelectTrigger><SelectValue placeholder={t("outcomes:lo.selectCo")} /></SelectTrigger>
                             <SelectContent>
                               {listCOs.map((co: any) => (
                                 <SelectItem key={co.id} value={co.id}>{co.code}</SelectItem>
@@ -733,7 +737,7 @@ export default function OutcomesManager() {
                           <Label>Description</Label>
                           <Textarea value={loDesc} onChange={e => setLoDesc(e.target.value)} rows={3} />
                         </div>
-                        <Button type="submit" className="w-full" disabled={createLO.isPending || !loCoId}>Create LO</Button>
+                        <Button type="submit" className="w-full" disabled={createLO.isPending || !loCoId}>{t("outcomes:lo.create")}</Button>
                       </form>
                     </DialogContent>
                   </Dialog>
@@ -743,8 +747,8 @@ export default function OutcomesManager() {
               {listCOs.length === 0 ? (
                 <div className="py-12 text-center border-2 border-dashed rounded-xl text-muted-foreground bg-muted/10">
                   <ListTree className="h-9 w-9 mx-auto mb-2 opacity-25" />
-                  <p className="font-medium text-sm">No outcomes saved yet</p>
-                  <p className="text-xs mt-1">Upload a PDF and extract a subject above.</p>
+                  <p className="font-medium text-sm">{t("outcomes:pdf.noSaved")}</p>
+                  <p className="text-xs mt-1">{t("outcomes:ui.uploadHint")}</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -812,20 +816,20 @@ export default function OutcomesManager() {
               </div>
               <Dialog open={poOpen} onOpenChange={setPoOpen}>
                 <DialogTrigger asChild>
-                  <Button size="sm"><Plus className="h-4 w-4 mr-1" />Add PO</Button>
+                  <Button size="sm"><Plus className="h-4 w-4 mr-1" />{t("outcomes:po.addPo")}</Button>
                 </DialogTrigger>
                 <DialogContent>
-                  <DialogHeader><DialogTitle>New Program Outcome</DialogTitle></DialogHeader>
+                  <DialogHeader><DialogTitle>{t("outcomes:po.newPo")}</DialogTitle></DialogHeader>
                   <form onSubmit={e => { e.preventDefault(); createPO.mutate(); }} className="space-y-4">
                     <div className="space-y-2">
-                      <Label>Code (e.g. PO1)</Label>
-                      <Input value={poCode} onChange={e => setPoCode(e.target.value)} required placeholder="PO1" />
+                      <Label>{t("outcomes:po.code")} (e.g. PO1)</Label>
+                      <Input value={poCode} onChange={e => setPoCode(e.target.value)} required placeholder={t("outcomes:po.codePlaceholder")} />
                     </div>
                     <div className="space-y-2">
-                      <Label>Description</Label>
+                      <Label>{t("outcomes:po.description")}</Label>
                       <Textarea value={poDesc} onChange={e => setPoDesc(e.target.value)} rows={3} />
                     </div>
-                    <Button type="submit" className="w-full" disabled={createPO.isPending}>Create</Button>
+                    <Button type="submit" className="w-full" disabled={createPO.isPending}>{t("outcomes:po.create")}</Button>
                   </form>
                 </DialogContent>
               </Dialog>
@@ -834,10 +838,10 @@ export default function OutcomesManager() {
             <Card className="border-blue-200 dark:border-blue-900/50 bg-blue-50/30 dark:bg-blue-950/10">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm flex items-center gap-2">
-                  <Upload className="h-4 w-4 text-blue-600" />Import POs from PDF
+                  <Upload className="h-4 w-4 text-blue-600" />{t("outcomes:ui.importPoTitle")}
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  Extracts lines matching "PO1: Description" format.
+                  {t("outcomes:ui.importPoHint")}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -855,7 +859,7 @@ export default function OutcomesManager() {
                     ? <><Loader2 className="h-4 w-4 animate-spin text-blue-600" /><span className="text-sm text-blue-600">Reading…</span></>
                     : extractedPOs.length > 0
                       ? <><CheckCircle2 className="h-4 w-4 text-emerald-600" /><span className="text-sm font-medium text-emerald-700">Found {extractedPOs.length} POs — click to re-upload</span></>
-                      : <><Upload className="h-4 w-4 text-muted-foreground" /><span className="text-sm">Click to upload PO document</span></>
+                      : <><Upload className="h-4 w-4 text-muted-foreground" /><span className="text-sm">{t("outcomes:pdf.uploadPoDocument")}</span></>
                   }
                 </div>
                 <input id="po-pdf-upload" type="file" accept=".pdf" className="hidden" onChange={handlePoPdfUpload} />

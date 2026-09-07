@@ -1,0 +1,52 @@
+{
+  "header": {
+    "title": "Calendar",
+    "description": "Track assignments, exams, classes, and announcements in one place.",
+    "addEvent": "Add event"
+  },
+  "stats": {
+    "totalTitle": "Total events",
+    "totalDesc": "All scheduled items",
+    "weekTitle": "This week",
+    "weekDesc": "Next 7 days",
+    "assignmentsTitle": "Assignments",
+    "assignmentsDesc": "Homework & tasks",
+    "examsTitle": "Exams",
+    "examsDesc": "Tests & assessments"
+  },
+  "schedule": {
+    "title": "Schedule"
+  },
+  "eventTypes": {
+    "assignment": "Assignment",
+    "announcement": "Announcement",
+    "class": "Class",
+    "exam": "Exam"
+  },
+  "modal": {
+    "title": "Add event",
+    "titleField": "Title",
+    "titlePlaceholder": "e.g. Math homework due",
+    "typeField": "Type",
+    "timeField": "Time (optional)",
+    "cancel": "Cancel",
+    "addEvent": "Add event"
+  },
+  "selectedDay": {
+    "nothingScheduled": "Nothing scheduled",
+    "nothingScheduledDesc": "No events on this day. Click 'Add event' to create one."
+  },
+  "upcoming": {
+    "title": "Upcoming",
+    "noEvents": "No upcoming events",
+    "noEventsDesc": "Your schedule is clear. Add events to stay on track.",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "inDays": "in {{count}} days"
+  },
+  "toasts": {
+    "eventAdded": "Event added",
+    "eventAddedDesc": "{{title}} on {{date}}",
+    "eventRemoved": "Event removed"
+  }
+}

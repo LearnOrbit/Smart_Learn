@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { GraduationCap, BookOpen, Eye, EyeOff } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { loadPageNamespace } from "@/i18n";
 
 type AppRole = "student" | "teacher";
 
@@ -23,6 +25,17 @@ const Auth = () => {
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  // `pages` namespace + key prefix `auth:` → looks up
+  // `pages.auth.<key>` in the active locale.
+  const { t } = useTranslation("pages");
+
+  // Bring in the auth page's translations on first mount. The
+  // `loaded` Set inside `loadPageNamespace` makes this idempotent
+  // — switching languages doesn't re-fetch, it just re-resolves
+  // the existing bundle.
+  useEffect(() => {
+    void loadPageNamespace("auth");
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,8 +44,8 @@ const Auth = () => {
       if (isLogin) {
         if (!email || !password) {
           toast({
-            title: "Error",
-            description: "Please enter both email and password",
+            title: t("auth:errors.title"),
+            description: t("auth:errors.missingCredentials"),
             variant: "destructive",
           });
           setIsLoading(false);
@@ -43,8 +56,8 @@ const Auth = () => {
       } else {
         if (!email || !password || !fullName) {
           toast({
-            title: "Error",
-            description: "Please fill in all fields",
+            title: t("auth:errors.title"),
+            description: t("auth:errors.missingFields"),
             variant: "destructive",
           });
           setIsLoading(false);
@@ -52,8 +65,8 @@ const Auth = () => {
         }
         if (password.length < 8) {
           toast({
-            title: "Error",
-            description: "Password must be at least 8 characters",
+            title: t("auth:errors.title"),
+            description: t("auth:errors.passwordTooShort"),
             variant: "destructive",
           });
           setIsLoading(false);
@@ -61,8 +74,8 @@ const Auth = () => {
         }
         if (password !== confirmPassword) {
           toast({
-            title: "Error",
-            description: "Passwords do not match",
+            title: t("auth:errors.title"),
+            description: t("auth:errors.passwordMismatch"),
             variant: "destructive",
           });
           setIsLoading(false);
@@ -70,8 +83,8 @@ const Auth = () => {
         }
         await signUp(email, password, fullName, selectedRole);
         toast({
-          title: "Account created!",
-          description: "You can now sign in with your credentials",
+          title: t("auth:success.accountCreatedTitle"),
+          description: t("auth:success.accountCreatedDescription"),
         });
         setEmail("");
         setPassword("");
@@ -81,8 +94,8 @@ const Auth = () => {
       }
     } catch (error: unknown) {
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "An unexpected error occurred",
+        title: t("auth:errors.title"),
+        description: error instanceof Error ? error.message : t("auth:errors.unexpected"),
         variant: "destructive",
       });
     } finally {
@@ -100,14 +113,14 @@ const Auth = () => {
           <h1 className="mt-4 text-3xl font-bold tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
             AcademiQ
           </h1>
-          <p className="mt-1 text-muted-foreground">Academic Management System</p>
+          <p className="mt-1 text-muted-foreground">{t("auth:tagline")}</p>
         </div>
 
         <Card>
           <CardHeader className="space-y-1 pb-4">
-            <CardTitle className="text-xl">{isLogin ? "Sign in" : "Create account"}</CardTitle>
+            <CardTitle className="text-xl">{isLogin ? t("auth:signIn") : t("auth:createAccount")}</CardTitle>
             <CardDescription>
-              {isLogin ? "Enter your credentials to access your dashboard" : "Fill in your details to get started"}
+              {isLogin ? t("auth:signInDescription") : t("auth:createAccountDescription")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -115,17 +128,17 @@ const Auth = () => {
               {!isLogin && (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="fullName">Full Name</Label>
+                    <Label htmlFor="fullName">{t("auth:fullName")}</Label>
                     <Input
                       id="fullName"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      placeholder="John Doe"
+                      placeholder={t("auth:fullNamePlaceholder")}
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>I am a</Label>
+                    <Label>{t("auth:iAmA")}</Label>
                     <div className="grid grid-cols-2 gap-3">
                       <button
                         type="button"
@@ -138,7 +151,7 @@ const Auth = () => {
                       >
                         <BookOpen className={`h-6 w-6 ${selectedRole === "student" ? "text-primary" : "text-muted-foreground"}`} />
                         <span className={`text-sm font-medium ${selectedRole === "student" ? "text-primary" : "text-muted-foreground"}`}>
-                          Student
+                          {t("auth:student")}
                         </span>
                       </button>
                       <button
@@ -152,7 +165,7 @@ const Auth = () => {
                       >
                         <GraduationCap className={`h-6 w-6 ${selectedRole === "teacher" ? "text-primary" : "text-muted-foreground"}`} />
                         <span className={`text-sm font-medium ${selectedRole === "teacher" ? "text-primary" : "text-muted-foreground"}`}>
-                          Teacher
+                          {t("auth:teacher")}
                         </span>
                       </button>
                     </div>
@@ -160,25 +173,25 @@ const Auth = () => {
                 </>
               )}
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t("auth:email")}</Label>
                 <Input
                   id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
+                  placeholder={t("auth:emailPlaceholder")}
                   required
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">{t("auth:password")}</Label>
                 <div className="relative">
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
+                    placeholder={t("auth:passwordPlaceholder")}
                     required
                     minLength={isLogin ? 1 : 8}
                     className="pr-10"
@@ -192,18 +205,18 @@ const Auth = () => {
                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
                 </div>
-                {!isLogin && <p className="text-xs text-muted-foreground">Minimum 8 characters</p>}
+                {!isLogin && <p className="text-xs text-muted-foreground">{t("auth:minChars")}</p>}
               </div>
               {!isLogin && (
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm Password</Label>
+                  <Label htmlFor="confirmPassword">{t("auth:confirmPassword")}</Label>
                   <div className="relative">
                     <Input
                       id="confirmPassword"
                       type={showConfirmPassword ? "text" : "password"}
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="••••••••"
+                      placeholder={t("auth:passwordPlaceholder")}
                       required
                       minLength={8}
                       className="pr-10"
@@ -218,19 +231,19 @@ const Auth = () => {
                     </button>
                   </div>
                   {password && confirmPassword && password === confirmPassword && (
-                    <p className="text-xs text-green-600">✓ Passwords match</p>
+                    <p className="text-xs text-green-600">{t("auth:passwordsMatch")}</p>
                   )}
                   {password && confirmPassword && password !== confirmPassword && (
-                    <p className="text-xs text-red-600">✗ Passwords do not match</p>
+                    <p className="text-xs text-red-600">{t("auth:passwordsDoNotMatch")}</p>
                   )}
                 </div>
               )}
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Please wait..." : isLogin ? "Sign In" : "Create Account"}
+                {isLoading ? t("auth:pleaseWait") : isLogin ? t("auth:signInCta") : t("auth:createAccountCta")}
               </Button>
             </form>
             <div className="mt-4 text-center text-sm text-muted-foreground">
-              {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
+              {isLogin ? t("auth:noAccount") : t("auth:haveAccount")}{" "}
               <button
                 onClick={() => {
                   setIsLogin(!isLogin);
@@ -241,7 +254,7 @@ const Auth = () => {
                 }}
                 className="font-medium text-primary hover:underline"
               >
-                {isLogin ? "Sign up" : "Sign in"}
+                {isLogin ? t("auth:signUp") : t("auth:signIn")}
               </button>
             </div>
           </CardContent>

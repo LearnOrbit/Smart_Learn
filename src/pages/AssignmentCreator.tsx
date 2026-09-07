@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { getClassrooms } from "@/utils/mockClassrooms";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/integrations/api/client";
+import { loadPageNamespace } from "@/i18n";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -39,6 +41,8 @@ type AssignmentStatus = "draft" | "published";
 
 export default function AssignmentCreator() {
   const { toast } = useToast();
+  const { t } = useTranslation("pages");
+  useEffect(() => { void loadPageNamespace("assignmentCreator"); }, []);
   const queryClient = useQueryClient();
 
   // ─── Assignment details ───
@@ -144,9 +148,9 @@ export default function AssignmentCreator() {
       setQuestions(data.questions.map((q: GeneratedQuestion) => ({ ...q, solution_text: q.solution_text || "", rubric: q.rubric || "" })));
       setGenerationMethod("co_based");
       setShowPreview(false);
-      toast({ title: `${data.questions.length} questions generated!`, description: "Review them below, then approve to send to students." });
+      toast({ title: t("assignmentCreator:toasts.questionsGenerated", { count: data.questions.length }), description: "Review them below, then approve to send to students." });
     },
-    onError: (e: Error) => toast({ title: "Generation failed", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("assignmentCreator:toasts.generationFailed"), description: e.message, variant: "destructive" }),
   });
 
   // ─── Generate from syllabus ───
@@ -165,9 +169,9 @@ export default function AssignmentCreator() {
       setQuestions(data.questions.map((q: GeneratedQuestion) => ({ ...q, solution_text: q.solution_text || "", rubric: q.rubric || "" })));
       setGenerationMethod("syllabus_based");
       setShowPreview(false);
-      toast({ title: `${data.questions.length} questions generated!`, description: "Review and approve to send to students." });
+      toast({ title: t("assignmentCreator:toasts.questionsGenerated", { count: data.questions.length }), description: "Review and approve to send to students." });
     },
-    onError: (e: Error) => toast({ title: "Generation failed", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("assignmentCreator:toasts.generationFailed"), description: e.message, variant: "destructive" }),
   });
 
   // ─── Past Paper Mutations ───
@@ -188,10 +192,10 @@ export default function AssignmentCreator() {
       return res.json();
     },
     onSuccess: (data) => {
-      toast({ title: "Past Paper Uploaded", description: data.message });
+      toast({ title: t("assignmentCreator:toasts.pastPaperUploaded"), description: data.message });
       refetchPastPapers();
     },
-    onError: (err: any) => toast({ title: "Upload Failed", description: err.message, variant: "destructive" }),
+    onError: (err: any) => toast({ title: t("assignmentCreator:toasts.uploadFailed"), description: err.message, variant: "destructive" }),
     onSettled: () => {
       setPastPaperUploading(false);
       if (pastPaperFileRef.current) pastPaperFileRef.current.value = "";
@@ -334,8 +338,8 @@ export default function AssignmentCreator() {
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <h2 className="text-2xl font-bold" style={{ fontFamily: "var(--font-display)" }}>Create Assignment</h2>
-          <p className="text-muted-foreground text-sm mt-1">Generate questions from COs or syllabus, review, then send to students</p>
+          <h2 className="text-2xl font-bold" style={{ fontFamily: "var(--font-display)" }}>{t("assignmentCreator:title")}</h2>
+          <p className="text-muted-foreground text-sm mt-1">{t("assignmentCreator:description")}</p>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-5">
@@ -343,24 +347,24 @@ export default function AssignmentCreator() {
           <div className="lg:col-span-2 space-y-4">
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2"><ClipboardList className="h-4 w-4" /> Assignment Details</CardTitle>
+                <CardTitle className="text-base flex items-center gap-2"><ClipboardList className="h-4 w-4" /> {t("assignmentCreator:details.cardTitle")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Title <span className="text-destructive">*</span></Label>
-                  <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Data Structures Quiz 1" />
+                  <Label>{t("assignmentCreator:details.titleLabel")} <span className="text-destructive">*</span></Label>
+                  <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t("assignmentCreator:details.titlePlaceholder")} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Description</Label>
-                  <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Instructions for students..." rows={2} />
+                  <Label>{t("assignmentCreator:details.descriptionLabel")}</Label>
+                  <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t("assignmentCreator:details.descriptionPlaceholder")} rows={2} />
                 </div>
                 <div className="grid gap-3 grid-cols-2">
                   <div className="space-y-2">
-                    <Label>Due Date</Label>
+                    <Label>{t("assignmentCreator:details.dueDateLabel")}</Label>
                     <Input type="datetime-local" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
                   </div>
                   <div className="space-y-2">
-                    <Label>Subject</Label>
+                    <Label>{t("assignmentCreator:details.subjectLabel")}</Label>
                     <Select value={subjectId} onValueChange={setSubjectId}>
                       <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
                       <SelectContent>
@@ -375,15 +379,15 @@ export default function AssignmentCreator() {
                 <div className="space-y-2">
                   <Label className="flex items-center gap-1.5">
                     <Users className="h-3.5 w-3.5 text-primary" />
-                    Send to Classroom
-                    <span className="text-[10px] text-muted-foreground font-normal ml-1">(students will see this assignment)</span>
+                    {t("assignmentCreator:classroom.label")}
+                    <span className="text-[10px] text-muted-foreground font-normal ml-1">({t("assignmentCreator:classroom.hint")})</span>
                   </Label>
                   <Select value={classroomId} onValueChange={setClassroomId}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select classroom..." />
+                      <SelectValue placeholder={t("assignmentCreator:classroom.placeholder")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">No classroom (save privately)</SelectItem>
+                      <SelectItem value="none">{t("assignmentCreator:classroom.none")}</SelectItem>
                       {classrooms.map((c) => (
                         <SelectItem key={c.id} value={c.id}>
                           {c.name}
@@ -395,12 +399,12 @@ export default function AssignmentCreator() {
                   {classroomId !== "none" && selectedClassroom && (
                     <p className="text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                       <CheckCircle2 className="h-3 w-3" />
-                      Will be visible to students in <strong>{selectedClassroom.name}</strong>
+                      {t("assignmentCreator:classroom.willBeVisible")} <strong>{selectedClassroom.name}</strong>
                     </p>
                   )}
                   {classroomId === "none" && (
                     <p className="text-[11px] text-muted-foreground">
-                      Select a classroom to make this assignment visible to students
+                      {t("assignmentCreator:classroom.emptyHint")}
                     </p>
                   )}
                 </div>
@@ -408,31 +412,31 @@ export default function AssignmentCreator() {
                 {subjectId !== "none" && (
                   <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3 flex flex-col gap-2">
                     <div className="flex items-center justify-between">
-                      <Label className="text-xs font-semibold text-amber-800 flex items-center gap-1.5"><FileText className="h-3.5 w-3.5" /> Past Papers Reference Pool</Label>
-                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">{pastQuestions.length} questions available</span>
+                      <Label className="text-xs font-semibold text-amber-800 flex items-center gap-1.5"><FileText className="h-3.5 w-3.5" /> {t("assignmentCreator:pastPapers.title")}</Label>
+                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">{t("assignmentCreator:pastPapers.available", { count: pastQuestions.length })}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <input ref={pastPaperFileRef} type="file" accept=".pdf" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) { setPastPaperUploading(true); uploadPastPaperMutation.mutate(f); } }} />
                       <Button size="sm" variant="outline" className="h-7 text-xs bg-white" onClick={() => pastPaperFileRef.current?.click()} disabled={pastPaperUploading}>
-                        {pastPaperUploading ? <><Loader2 className="h-3 w-3 mr-1 animate-spin" />Uploading...</> : <><Upload className="h-3 w-3 mr-1" />Upload PDF</>}
+                        {pastPaperUploading ? <><Loader2 className="h-3 w-3 mr-1 animate-spin" />{t("assignmentCreator:pastPapers.uploading")}</> : <><Upload className="h-3 w-3 mr-1" />{t("assignmentCreator:pastPapers.upload")}</>}
                       </Button>
                       {pastQuestions.length > 0 && (
                         <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive hover:text-destructive/90 hover:bg-destructive/10" onClick={() => clearPastPapersMutation.mutate()} disabled={clearPastPapersMutation.isPending}>
-                          <Trash2 className="h-3 w-3 mr-1" />Clear Pool
+                          <Trash2 className="h-3 w-3 mr-1" />{t("assignmentCreator:pastPapers.clear")}
                         </Button>
                       )}
                     </div>
-                    <p className="text-[10px] text-muted-foreground leading-tight">These questions will be blended into AI generation (~40%) to ensure realistic exams.</p>
+                    <p className="text-[10px] text-muted-foreground leading-tight">{t("assignmentCreator:pastPapers.blendHint")}</p>
                   </div>
                 )}
 
                 {/* ─── CO Selector ─── */}
                 <div className="space-y-2">
                   <Label className="flex items-center gap-1.5 text-sm font-semibold">
-                    <GraduationCap className="h-4 w-4 text-violet-500" /> Course Outcomes
+                    <GraduationCap className="h-4 w-4 text-violet-500" /> {t("assignmentCreator:courseOutcomes.label")}
                   </Label>
                   {filteredCOs.length === 0 ? (
-                    <div className="text-xs text-muted-foreground italic py-2">No COs defined yet. Extract them on the Outcomes page first.</div>
+                    <div className="text-xs text-muted-foreground italic py-2">{t("assignmentCreator:courseOutcomes.noCos")}</div>
                   ) : (
                     <div className="flex flex-col gap-1.5 max-h-56 overflow-y-auto pr-1">
                       {filteredCOs.map(co => (
@@ -455,7 +459,7 @@ export default function AssignmentCreator() {
                     </div>
                   )}
                   {selectedCOs.length > 0 && (
-                    <p className="text-xs text-violet-600 dark:text-violet-400 font-medium">{selectedCOs.length} CO{selectedCOs.length > 1 ? "s" : ""} selected</p>
+                    <p className="text-xs text-violet-600 dark:text-violet-400 font-medium">{t("assignmentCreator:courseOutcomes.selected", { count: selectedCOs.length })}</p>
                   )}
                 </div>
               </CardContent>
@@ -465,22 +469,22 @@ export default function AssignmentCreator() {
             <Card>
               <CardContent className="pt-5 space-y-3">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Questions</span>
+                  <span className="text-muted-foreground">{t("assignmentCreator:summary.questions")}</span>
                   <span className="font-bold text-primary">{questions.length}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Total Marks</span>
+                  <span className="text-muted-foreground">{t("assignmentCreator:summary.totalMarks")}</span>
                   <span className="font-bold text-primary">{totalMarks}</span>
                 </div>
                 {selectedLOs.length > 0 && (
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">LOs linked</span>
+                    <span className="text-muted-foreground">{t("assignmentCreator:summary.losLinked")}</span>
                     <span className="font-bold text-primary">{selectedLOs.length}</span>
                   </div>
                 )}
                 {classroomId !== "none" && selectedClassroom && (
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Classroom</span>
+                    <span className="text-muted-foreground">{t("assignmentCreator:summary.classroom")}</span>
                     <span className="font-bold text-emerald-600 dark:text-emerald-400 text-xs">{selectedClassroom.name}</span>
                   </div>
                 )}
@@ -493,7 +497,7 @@ export default function AssignmentCreator() {
                     onClick={() => setShowPreview(v => !v)}
                   >
                     <Eye className="h-4 w-4" />
-                    {showPreview ? "Hide Preview" : "Preview Assignment"}
+                    {showPreview ? t("assignmentCreator:actions.hidePreview") : t("assignmentCreator:actions.preview")}
                   </Button>
                 )}
 
@@ -505,7 +509,7 @@ export default function AssignmentCreator() {
                     className="gap-1.5 text-sm"
                   >
                     {createMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
-                    Save Draft
+                    {t("assignmentCreator:actions.saveDraft")}
                   </Button>
                   <Button
                     disabled={!canCreate}
@@ -513,14 +517,14 @@ export default function AssignmentCreator() {
                     className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm"
                   >
                     {createMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-                    Send to Students
+                    {t("assignmentCreator:actions.sendToStudents")}
                   </Button>
                 </div>
-                {!title.trim() && <p className="text-[11px] text-muted-foreground text-center">Add a title to enable submission</p>}
-                {questions.length === 0 && <p className="text-[11px] text-muted-foreground text-center">Generate or add questions first</p>}
+                {!title.trim() && <p className="text-[11px] text-muted-foreground text-center">{t("assignmentCreator:hints.needTitle")}</p>}
+                {questions.length === 0 && <p className="text-[11px] text-muted-foreground text-center">{t("assignmentCreator:hints.needQuestions")}</p>}
                 {classroomId === "none" && canCreate && (
                   <p className="text-[11px] text-amber-600 dark:text-amber-400 text-center flex items-center justify-center gap-1">
-                    <AlertCircle className="h-3 w-3" /> No classroom selected — students won't see this
+                    <AlertCircle className="h-3 w-3" /> {t("assignmentCreator:hints.noClassroom")}
                   </p>
                 )}
               </CardContent>
@@ -532,23 +536,23 @@ export default function AssignmentCreator() {
             {/* Generation card */}
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2"><Sparkles className="h-4 w-4" /> Question Generation</CardTitle>
-                <CardDescription>Choose how to generate questions</CardDescription>
+                <CardTitle className="text-base flex items-center gap-2"><Sparkles className="h-4 w-4" /> {t("assignmentCreator:generation.title")}</CardTitle>
+                <CardDescription>{t("assignmentCreator:generation.description")}</CardDescription>
               </CardHeader>
               <CardContent>
                 <Tabs defaultValue="co" className="space-y-4">
                   <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="co"><GraduationCap className="h-3.5 w-3.5 mr-1.5" />CO-Based</TabsTrigger>
-                    <TabsTrigger value="syllabus"><BookOpen className="h-3.5 w-3.5 mr-1.5" />Syllabus</TabsTrigger>
-                    <TabsTrigger value="manual"><FileText className="h-3.5 w-3.5 mr-1.5" />Manual</TabsTrigger>
+                    <TabsTrigger value="co"><GraduationCap className="h-3.5 w-3.5 mr-1.5" />{t("assignmentCreator:generation.tabs.co")}</TabsTrigger>
+                    <TabsTrigger value="syllabus"><BookOpen className="h-3.5 w-3.5 mr-1.5" />{t("assignmentCreator:generation.tabs.syllabus")}</TabsTrigger>
+                    <TabsTrigger value="manual"><FileText className="h-3.5 w-3.5 mr-1.5" />{t("assignmentCreator:generation.tabs.manual")}</TabsTrigger>
                   </TabsList>
 
                   {/* CO-Based */}
                   <TabsContent value="co" className="space-y-4">
                     <div className="space-y-2">
-                      <Label>Select Course Outcomes</Label>
+                      <Label>{t("assignmentCreator:generation.coTab.selectLabel")}</Label>
                       {courseOutcomes.length === 0 ? (
-                        <p className="text-xs text-muted-foreground italic">No COs defined. Add them on the Outcomes page first.</p>
+                        <p className="text-xs text-muted-foreground italic">{t("assignmentCreator:generation.coTab.noCosHint")}</p>
                       ) : (
                         <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
                           {courseOutcomes.map((co) => (
@@ -564,55 +568,55 @@ export default function AssignmentCreator() {
                       )}
                     </div>
                     <div className="grid gap-3 grid-cols-3">
-                      <div className="space-y-1"><Label className="text-xs">Questions</Label><Input type="number" min={1} max={30} value={numQuestions} onChange={(e) => setNumQuestions(Number(e.target.value))} /></div>
-                      <div className="space-y-1"><Label className="text-xs">Marks/Q</Label><Input type="number" min={1} value={marksPerQ} onChange={(e) => setMarksPerQ(Number(e.target.value))} /></div>
+                      <div className="space-y-1"><Label className="text-xs">{t("assignmentCreator:generation.coTab.numQuestions")}</Label><Input type="number" min={1} max={30} value={numQuestions} onChange={(e) => setNumQuestions(Number(e.target.value))} /></div>
+                      <div className="space-y-1"><Label className="text-xs">{t("assignmentCreator:generation.coTab.marksPerQuestion")}</Label><Input type="number" min={1} value={marksPerQ} onChange={(e) => setMarksPerQ(Number(e.target.value))} /></div>
                       <div className="space-y-1">
-                        <Label className="text-xs">Difficulty</Label>
+                        <Label className="text-xs">{t("assignmentCreator:generation.coTab.difficulty")}</Label>
                         <Select value={difficulty} onValueChange={setDifficulty}>
                           <SelectTrigger><SelectValue /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="easy">Easy</SelectItem>
-                            <SelectItem value="medium">Medium</SelectItem>
-                            <SelectItem value="hard">Hard</SelectItem>
+                            <SelectItem value="easy">{t("assignmentCreator:generation.coTab.difficulty_easy")}</SelectItem>
+                            <SelectItem value="medium">{t("assignmentCreator:generation.coTab.difficulty_medium")}</SelectItem>
+                            <SelectItem value="hard">{t("assignmentCreator:generation.coTab.difficulty_hard")}</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                     </div>
                     <Button onClick={() => genCOMutation.mutate()} disabled={selectedCOs.length === 0 || genCOMutation.isPending} className="w-full">
-                      {genCOMutation.isPending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Generating...</> : <><Sparkles className="h-4 w-4 mr-2" />Generate from COs</>}
+                      {genCOMutation.isPending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{t("assignmentCreator:generation.coTab.generating")}</> : <><Sparkles className="h-4 w-4 mr-2" />{t("assignmentCreator:generation.coTab.generate")}</>}
                     </Button>
                   </TabsContent>
 
                   {/* Syllabus-Based */}
                   <TabsContent value="syllabus" className="space-y-4">
                     <div className="space-y-2">
-                      <Label>Syllabus Text</Label>
-                      <Textarea value={syllabusText} onChange={(e) => setSyllabusText(e.target.value)} rows={4} placeholder="Paste syllabus text here..." />
+                      <Label>{t("assignmentCreator:generation.syllabusTab.textLabel")}</Label>
+                      <Textarea value={syllabusText} onChange={(e) => setSyllabusText(e.target.value)} rows={4} placeholder={t("assignmentCreator:generation.syllabusTab.placeholder")} />
                     </div>
                     <div className="grid gap-3 grid-cols-3">
-                      <div className="space-y-1"><Label className="text-xs">Questions</Label><Input type="number" min={1} max={30} value={numQuestions} onChange={(e) => setNumQuestions(Number(e.target.value))} /></div>
-                      <div className="space-y-1"><Label className="text-xs">Marks/Q</Label><Input type="number" min={1} value={marksPerQ} onChange={(e) => setMarksPerQ(Number(e.target.value))} /></div>
+                      <div className="space-y-1"><Label className="text-xs">{t("assignmentCreator:generation.syllabusTab.numQuestions")}</Label><Input type="number" min={1} max={30} value={numQuestions} onChange={(e) => setNumQuestions(Number(e.target.value))} /></div>
+                      <div className="space-y-1"><Label className="text-xs">{t("assignmentCreator:generation.syllabusTab.marksPerQuestion")}</Label><Input type="number" min={1} value={marksPerQ} onChange={(e) => setMarksPerQ(Number(e.target.value))} /></div>
                       <div className="space-y-1">
-                        <Label className="text-xs">Difficulty</Label>
+                        <Label className="text-xs">{t("assignmentCreator:generation.syllabusTab.difficulty")}</Label>
                         <Select value={difficulty} onValueChange={setDifficulty}>
                           <SelectTrigger><SelectValue /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="easy">Easy</SelectItem>
-                            <SelectItem value="medium">Medium</SelectItem>
-                            <SelectItem value="hard">Hard</SelectItem>
+                            <SelectItem value="easy">{t("assignmentCreator:generation.syllabusTab.difficulty_easy")}</SelectItem>
+                            <SelectItem value="medium">{t("assignmentCreator:generation.syllabusTab.difficulty_medium")}</SelectItem>
+                            <SelectItem value="hard">{t("assignmentCreator:generation.syllabusTab.difficulty_hard")}</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                     </div>
                     <Button onClick={() => genSyllabusMutation.mutate()} disabled={!syllabusText.trim() || genSyllabusMutation.isPending} className="w-full">
-                      {genSyllabusMutation.isPending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Generating...</> : <><Sparkles className="h-4 w-4 mr-2" />Generate from Syllabus</>}
+                      {genSyllabusMutation.isPending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{t("assignmentCreator:generation.syllabusTab.generating")}</> : <><Sparkles className="h-4 w-4 mr-2" />{t("assignmentCreator:generation.syllabusTab.generate")}</>}
                     </Button>
                   </TabsContent>
 
                   {/* Manual */}
                   <TabsContent value="manual" className="space-y-3">
-                    <p className="text-sm text-muted-foreground">Add questions one by one and fill in the details manually.</p>
-                    <Button variant="outline" onClick={addManualQuestion}><Plus className="h-4 w-4 mr-2" />Add Question</Button>
+                    <p className="text-sm text-muted-foreground">{t("assignmentCreator:generation.manualTab.description")}</p>
+                    <Button variant="outline" onClick={addManualQuestion}><Plus className="h-4 w-4 mr-2" />{t("assignmentCreator:generation.manualTab.addQuestion")}</Button>
                   </TabsContent>
                 </Tabs>
               </CardContent>
@@ -625,15 +629,15 @@ export default function AssignmentCreator() {
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base flex items-center gap-2">
                       <Eye className="h-4 w-4 text-emerald-600" />
-                      Assignment Preview
+                      {t("assignmentCreator:preview.cardTitle")}
                     </CardTitle>
-                    <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border-amber-300">Pending Approval</Badge>
+                    <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border-amber-300">{t("assignmentCreator:preview.pendingApproval")}</Badge>
                   </div>
                   <CardDescription>This is what students will see after you approve and send.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="rounded-lg border bg-background p-4 space-y-2">
-                    <h3 className="font-bold text-lg">{title || "Untitled Assignment"}</h3>
+                    <h3 className="font-bold text-lg">{title || t("assignmentCreator:preview.untitled")}</h3>
                     {description && <p className="text-sm text-muted-foreground">{description}</p>}
                     <div className="flex flex-wrap gap-2 mt-2">
                       {selectedSubject && <Badge variant="outline">{selectedSubject.code} — {selectedSubject.name}</Badge>}
@@ -652,14 +656,14 @@ export default function AssignmentCreator() {
                             {q.co_code && <Badge className="bg-primary/10 text-primary border-0 text-[10px]">{q.co_code}</Badge>}
                             <Badge variant="outline" className="text-[10px] capitalize">{q.difficulty}</Badge>
                           </div>
-                          <p className="text-sm">{q.question_text || <span className="text-muted-foreground italic">No question text</span>}</p>
+                          <p className="text-sm">{q.question_text || <span className="text-muted-foreground italic">{t("assignmentCreator:questions.noText")}</span>}</p>
                         </div>
                       </div>
                     ))}
                   </div>
                   <div className="flex gap-2">
                     <Button variant="outline" className="flex-1" onClick={() => setShowPreview(false)}>
-                      Edit Questions
+                      {t("assignmentCreator:preview.editQuestions")}
                     </Button>
                     <Button
                       className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
@@ -667,7 +671,7 @@ export default function AssignmentCreator() {
                       onClick={() => createMutation.mutate("published")}
                     >
                       {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                      Approve &amp; Send to Students
+                      {t("assignmentCreator:preview.approveAndSend")}
                     </Button>
                   </div>
                 </CardContent>

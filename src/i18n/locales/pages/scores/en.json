@@ -1,0 +1,65 @@
+{
+  "student": {
+    "title": "My Scores",
+    "description": "Your LO, CO, and PO attainment scores"
+  },
+  "teacher": {
+    "title": "Student Scores",
+    "description": "View LO → CO → PO attainment per student",
+    "selectStudent": "Select a student",
+    "selectStudentHint": "Select a student to view their scores."
+  },
+  "grade": {
+    "title": "Enter / Edit Scores",
+    "description": "Grade each assignment. Scores auto-compute into LO → CO → PO attainment above.",
+    "noAssignments": "No assignments found. Create assignments first in the Teacher Dashboard.",
+    "addEntry": "Add Entry",
+    "marksPlaceholder": "Marks",
+    "gradePlaceholder": "Grade",
+    "feedbackPlaceholder": "Feedback",
+    "save": "Save",
+    "notGraded": "Not graded",
+    "marksWithCount_one": "{{count}} mark",
+    "marksWithCount_other": "{{count}} marks",
+    "toasts": {
+      "saved": "Score saved!",
+      "submissionCreated": "Submission created — enter marks below",
+      "error": "Error"
+    }
+  },
+  "view": {
+    "loading": "Calculating scores...",
+    "noScores": "No scores available yet. Scores appear once assignments are graded.",
+    "assignment": "Assignment",
+    "graded": {
+      "title": "Graded Assignments",
+      "description": "Marks, grades, and feedback from your teacher"
+    },
+    "insights": {
+      "title": "Performance Insights",
+      "recentAvg": "Recent Avg (last 3):",
+      "overallAvg": "Overall Avg:",
+      "trend": "Trend:",
+      "improving": "Improving",
+      "declining": "Declining",
+      "stable": "Stable"
+    },
+    "po": {
+      "title": "Program Outcomes"
+    },
+    "co": {
+      "title": "Course Outcomes"
+    },
+    "lo": {
+      "title": "Learning Outcomes"
+    }
+  },
+  "feedback": {
+    "strong": "✅ Strong performance in {{codes}} (above 70%). Keep it up!",
+    "moderate": "⚠️ Needs improvement in {{codes}} (40-70%). Focus on practice and review.",
+    "weak": "🔴 Critical attention needed for {{codes}} (below 40%). Consider revisiting fundamentals.",
+    "overallExcellent": "📊 Overall: Excellent progress. You're on track for strong attainment.",
+    "overallModerate": "📊 Overall: Moderate progress. Consistent effort will lead to improvement.",
+    "overallLow": "📊 Overall: Below expectations. Seek additional support and dedicate more study time."
+  }
+}

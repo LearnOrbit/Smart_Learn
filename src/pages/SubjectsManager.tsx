@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { apiClient } from "@/integrations/api/client";
+import { loadPageNamespace } from "@/i18n";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,12 +21,15 @@ interface SubjectCOMapping { id: string; subject_id: string; course_outcome_id: 
 
 export default function SubjectsManager() {
   const { toast } = useToast();
+  const { t } = useTranslation("pages");
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
+
+  useEffect(() => { void loadPageNamespace("subjects"); }, []);
 
   /* ─── Queries ── */
   const { data: subjects = [], isLoading } = useQuery<SubjectItem[]>({
@@ -57,15 +62,15 @@ export default function SubjectsManager() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["subjects"] });
       setOpen(false); setCode(""); setName(""); setDescription("");
-      toast({ title: "Subject created!" });
+      toast({ title: t("subjects:toasts.created") });
     },
-    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("subjects:toasts.errorTitle"), description: e.message, variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => { const { error } = await apiClient.delete(`/subjects/${id}`); if (error) throw error; },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["subjects"] }); toast({ title: "Subject deleted" }); },
-    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["subjects"] }); toast({ title: t("subjects:toasts.deleted") }); },
+    onError: (e: Error) => toast({ title: t("subjects:toasts.errorTitle"), description: e.message, variant: "destructive" }),
   });
 
   const linkCOMutation = useMutation({
@@ -75,9 +80,9 @@ export default function SubjectsManager() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["subject-co-mappings", selectedSubjectId] });
-      toast({ title: "CO linked to subject!" });
+      toast({ title: t("subjects:toasts.coLinked") });
     },
-    onError: (e: Error) => toast({ title: "Link failed", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("subjects:toasts.linkFailed"), description: e.message, variant: "destructive" }),
   });
 
   const unlinkCOMutation = useMutation({
@@ -87,9 +92,9 @@ export default function SubjectsManager() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["subject-co-mappings", selectedSubjectId] });
-      toast({ title: "CO unlinked" });
+      toast({ title: t("subjects:toasts.coUnlinked") });
     },
-    onError: (e: Error) => toast({ title: "Unlink failed", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("subjects:toasts.unlinkFailed"), description: e.message, variant: "destructive" }),
   });
 
   const toggleCO = (coId: string) => {
@@ -110,30 +115,30 @@ export default function SubjectsManager() {
         {/* ── Header ── */}
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold" style={{ fontFamily: "var(--font-display)" }}>Subjects</h2>
-            <p className="text-muted-foreground">Manage course subjects and their CO linkages</p>
+            <h2 className="text-2xl font-bold" style={{ fontFamily: "var(--font-display)" }}>{t("subjects:header.title")}</h2>
+            <p className="text-muted-foreground">{t("subjects:header.description")}</p>
           </div>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button><Plus className="h-4 w-4 mr-2" />New Subject</Button>
+              <Button><Plus className="h-4 w-4 mr-2" />{t("subjects:buttons.newSubject")}</Button>
             </DialogTrigger>
             <DialogContent>
-              <DialogHeader><DialogTitle>Create Subject</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle>{t("subjects:form.createTitle")}</DialogTitle></DialogHeader>
               <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(); }} className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Code</Label>
-                  <Input value={code} onChange={e => setCode(e.target.value)} required placeholder="e.g. CS101" />
+                  <Label>{t("subjects:form.code")}</Label>
+                  <Input value={code} onChange={e => setCode(e.target.value)} required placeholder={t("subjects:form.codePlaceholder")} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Name</Label>
-                  <Input value={name} onChange={e => setName(e.target.value)} required placeholder="e.g. Data Structures" />
+                  <Label>{t("subjects:form.name")}</Label>
+                  <Input value={name} onChange={e => setName(e.target.value)} required placeholder={t("subjects:form.namePlaceholder")} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Description</Label>
-                  <Textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Description..." rows={3} />
+                  <Label>{t("subjects:form.description")}</Label>
+                  <Textarea value={description} onChange={e => setDescription(e.target.value)} placeholder={t("subjects:form.descriptionPlaceholder")} rows={3} />
                 </div>
                 <Button type="submit" className="w-full" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? "Creating..." : "Create Subject"}
+                  {createMutation.isPending ? t("subjects:buttons.creating") : t("subjects:buttons.createSubject")}
                 </Button>
               </form>
             </DialogContent>
@@ -142,19 +147,19 @@ export default function SubjectsManager() {
 
         <Tabs defaultValue="subjects">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="subjects" className="gap-1.5"><BookOpen className="h-4 w-4" />Subjects</TabsTrigger>
-            <TabsTrigger value="co-link" className="gap-1.5"><Link2 className="h-4 w-4" />CO Linkage</TabsTrigger>
+            <TabsTrigger value="subjects" className="gap-1.5"><BookOpen className="h-4 w-4" />{t("subjects:tabs.subjects")}</TabsTrigger>
+            <TabsTrigger value="co-link" className="gap-1.5"><Link2 className="h-4 w-4" />{t("subjects:tabs.coLinkage")}</TabsTrigger>
           </TabsList>
 
           {/* ── Subjects Tab ── */}
           <TabsContent value="subjects" className="space-y-4 mt-4">
             {isLoading ? (
-              <p className="text-muted-foreground">Loading...</p>
+              <p className="text-muted-foreground">{t("subjects:list.loading")}</p>
             ) : subjects.length === 0 ? (
               <Card>
                 <CardContent className="flex flex-col items-center justify-center py-12">
                   <BookOpen className="h-12 w-12 text-muted-foreground/40 mb-3" />
-                  <p className="text-muted-foreground">No subjects yet. Create your first one!</p>
+                  <p className="text-muted-foreground">{t("subjects:list.emptyTitle")}</p>
                 </CardContent>
               </Card>
             ) : (
@@ -173,7 +178,7 @@ export default function SubjectsManager() {
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-sm text-muted-foreground">{s.description || "No description"}</p>
+                      <p className="text-sm text-muted-foreground">{s.description || t("subjects:list.noDescription")}</p>
                     </CardContent>
                   </Card>
                 ))}
@@ -187,12 +192,12 @@ export default function SubjectsManager() {
               {/* Subject list */}
               <div className="lg:col-span-2 space-y-2">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-                  Select a Subject
+                  {t("subjects:coLink.selectSubject")}
                 </p>
                 {subjects.length === 0 ? (
                   <Card>
                     <CardContent className="py-6 text-center text-sm text-muted-foreground">
-                      No subjects yet.
+                      {t("subjects:coLink.emptySubjects")}
                     </CardContent>
                   </Card>
                 ) : (
@@ -219,7 +224,7 @@ export default function SubjectsManager() {
                   <Card className="border-dashed">
                     <CardContent className="py-16 text-center text-muted-foreground">
                       <Link2 className="h-10 w-10 mx-auto mb-3 opacity-30" />
-                      <p className="text-sm">Select a subject to link Course Outcomes</p>
+                      <p className="text-sm">{t("subjects:coLink.emptyCoListTitle")}</p>
                     </CardContent>
                   </Card>
                 ) : (
@@ -227,16 +232,16 @@ export default function SubjectsManager() {
                     <CardHeader className="pb-3">
                       <CardTitle className="text-base flex items-center gap-2">
                         <Link2 className="h-4 w-4" />
-                        COs for <span className="text-primary">{selectedSubject?.code}</span>
+                        {t("subjects:coLink.cardTitle", { code: selectedSubject?.code ?? "" })}
                       </CardTitle>
                       <CardDescription>
-                        Toggle COs to link/unlink them to this subject. Linked COs will appear in the Question Paper Generator.
+                        {t("subjects:coLink.cardDescription")}
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
                       {cos.length === 0 ? (
                         <p className="text-sm text-muted-foreground py-4 text-center">
-                          No COs defined. Go to Outcomes Manager first.
+                          {t("subjects:coLink.noCos")}
                         </p>
                       ) : (
                         <div className="space-y-2">
@@ -261,12 +266,12 @@ export default function SubjectsManager() {
                                 {linked ? (
                                   <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 shrink-0">
                                     <CheckCircle2 className="h-4 w-4" />
-                                    <span className="text-xs font-medium">Linked</span>
+                                    <span className="text-xs font-medium">{t("subjects:coLink.linked")}</span>
                                   </div>
                                 ) : (
                                   <div className="flex items-center gap-1.5 text-muted-foreground shrink-0">
                                     <Unlink className="h-4 w-4" />
-                                    <span className="text-xs">Not linked</span>
+                                    <span className="text-xs">{t("subjects:coLink.notLinked")}</span>
                                   </div>
                                 )}
                               </button>
@@ -278,8 +283,7 @@ export default function SubjectsManager() {
                       {mappedCOIds.size > 0 && (
                         <div className="mt-4 pt-3 border-t">
                           <p className="text-xs text-muted-foreground">
-                            <strong>{mappedCOIds.size}</strong> CO{mappedCOIds.size !== 1 ? "s" : ""} linked to {selectedSubject?.code}.
-                            These will appear as options in the Question Paper Generator.
+                            <strong>{mappedCOIds.size}</strong> {t("subjects:coLink.summary", { count: mappedCOIds.size, code: selectedSubject?.code ?? "" })}
                           </p>
                         </div>
                       )}

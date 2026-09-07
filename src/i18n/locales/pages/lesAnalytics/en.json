@@ -1,0 +1,113 @@
+{
+  "header": {
+    "title": "Hybrid ML + Generative AI Framework",
+    "description": "3-layer pipeline: Data Collection → Predictive Analytics (LES) → GenAI Advisory",
+    "runPipeline": "Run Pipeline",
+    "runHybrid": "Run Hybrid ML Pipeline"
+  },
+  "noStudents": "No students",
+  "noData": {
+    "title": "Awaiting Performance Data",
+    "teacherHint": "Select a student who has performance data entered.",
+    "studentHint": "Your teacher hasn't entered your marks yet."
+  },
+  "layers": {
+    "layer1": {
+      "title": "LAYER 1 — Data Collection & Preprocessing",
+      "description": "Raw feature ingestion → missing value handling → normalization → LO-CO-PO mapping",
+      "ingested": "✓ Ingested",
+      "dataCollection": "Data Collection",
+      "studentMarks": "Student Marks",
+      "attendance": "Attendance",
+      "internalAssessments": "Internal Assessments",
+      "labPerformance": "Lab Performance",
+      "assignmentScores": "Assignment Scores",
+      "studyHours": "Study Hours / Week",
+      "conceptMastery": "Concept Mastery",
+      "preprocessing": "Data Preprocessing & Feature Engineering",
+      "steps": {
+        "missing": "Missing Value Handling",
+        "normalization": "Normalization / Scaling",
+        "weighting": "Feature Weighting",
+        "loco": "LO-CO-PO Mapping",
+        "les": "LES Computation"
+      }
+    },
+    "layer2": {
+      "title": "LAYER 2 — Predictive Analytics",
+      "description": "ML model ensemble → model selection → LES output → risk classification",
+      "computed": "✓ Computed",
+      "ensemble": "ML Model Ensemble",
+      "metrics": "Model Selection Metrics",
+      "pipelineOutput": "Pipeline Output",
+      "lesScore": "LES Score / 100",
+      "les": "LES:",
+      "classification": "Classification:"
+    },
+    "layer3": {
+      "title": "LAYER 3 — Generative AI & Evaluation",
+      "description": "Gap identification → GenAI advisory → re-assessment → continuous model updating",
+      "advisoryGenerated": "✓ Advisory Generated",
+      "running": "Running GenAI…",
+      "offline": "⚠ Offline Fallback",
+      "gap": "Gap Identification",
+      "genAi": "Generative AI Advisory Layer",
+      "weak": "Weak Areas",
+      "noneDetected": "None detected",
+      "recommendations": "Personalized Recommendations",
+      "studyPlan": "Adaptive Weekly Schedule (5-Day Study Plan)",
+      "reassessment": "Re-Assessment",
+      "statsEval": "Statistical Evaluation",
+      "offlineTitle": "⚠ AI Advisory Service Offline",
+      "offlineHint": "Gap identification from Layer 1 data is shown above. Start the backend AI service for full advisory."
+    }
+  },
+  "gap": {
+    "weakConcept": "Weak Concept Detection",
+    "lowOutcome": "Low Outcome Attainment",
+    "skill": "Skill Deficiency Analysis",
+    "detected": "Detected",
+    "clear": "Clear"
+  },
+  "idle": {
+    "hint": "Student data loaded. Run the ML pipeline to see LES score, risk level, and AI advisory."
+  },
+  "day": "Day {{n}}",
+  "risk": {
+    "low": "Low Risk",
+    "moderate": "Moderate Risk",
+    "high": "High Risk"
+  },
+  "class": {
+    "low": "Low",
+    "moderate": "Moderate",
+    "high": "High"
+  },
+  "metrics": {
+    "r2": "R² Score",
+    "rmse": "RMSE",
+    "mae": "MAE",
+    "crossVal": "Cross-Val"
+  },
+  "models": {
+    "linear": "Linear Regression",
+    "randomForest": "Random Forest",
+    "gradientBoost": "Gradient Boosting",
+    "xgboost": "XGBoost",
+    "logistic": "Logistic Reg. (Risk)"
+  },
+  "reassessment": {
+    "post": "Post-Intervention Eval",
+    "pending": "Pending",
+    "updated": "Updated LES Target",
+    "hoursNeeded": "Study Hours Needed"
+  },
+  "statsEval": {
+    "ttest": "Paired t-test",
+    "cohen": "Cohen's d (Effect Size)",
+    "r2": "R² Score",
+    "rmse": "RMSE",
+    "crossVal": "Cross-Validation",
+    "continuous": "Continuous Update"
+  }
+}

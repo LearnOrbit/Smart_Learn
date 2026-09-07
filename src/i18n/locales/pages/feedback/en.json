@@ -1,0 +1,61 @@
+{
+  "header": {
+    "title": "Feedback & Improvement Tools",
+    "description": "AI-powered advisory plans, gap analysis, and improvement suggestions"
+  },
+  "tabs": {
+    "advisory": "Advisory Plan",
+    "improvement": "Improvement Insights"
+  },
+  "advisoryForm": {
+    "title": "Generate Advisory Plan",
+    "description": "Enter student performance data and weak areas to generate an AI-powered personalised advisory plan.",
+    "studentName": "Student Name",
+    "studentNamePlaceholder": "e.g. Alice",
+    "weakConcepts": "Weak Concepts (comma separated)",
+    "weakConceptsPlaceholder": "e.g. Data Structures, Algorithm Design",
+    "performanceMetrics": "Performance Metrics",
+    "marks": "Marks (0-100)",
+    "attendance": "Attendance (0-100)",
+    "internal": "Internal Assessments (0-20)",
+    "lab": "Lab Performance (0-25)",
+    "assignments": "Assignment Scores (0-10)",
+    "studyHours": "Study Hours/day",
+    "mastery": "Concept Mastery (0-100)",
+    "generating": "Generating...",
+    "generate": "Generate Plan"
+  },
+  "resultCards": {
+    "studyPlan": "Study Plan",
+    "conceptReinforcement": "Concept Reinforcement",
+    "miniProject": "Mini Project",
+    "adaptiveSchedule": "Adaptive Schedule"
+  },
+  "insights": {
+    "title": "CO Attainment Insights",
+    "description": "Automatically identifies course outcomes with low attainment and suggests areas for curriculum improvement.",
+    "noData": "No CO attainment data yet. Grade assignments and compute scores first.",
+    "belowThreshold": "{{count}} Course Outcome(s) below 50% attainment",
+    "allGood": "All COs are above 50% attainment!",
+    "allGoodSub": "Keep monitoring as more submissions come in.",
+    "suggestedActions": "Suggested Actions:",
+    "action1": "Review and revise teaching material for {{co}}",
+    "action2": "Add supplementary assignments targeting its {{count}} linked LO(s)",
+    "action3": "Consider tutorial sessions or additional practice",
+    "action4": "Use the Advisory Plan generator for at-risk students"
+  },
+  "table": {
+    "coCode": "CO Code",
+    "description": "Description",
+    "los": "LOs",
+    "avgScore": "Avg Score",
+    "status": "Status",
+    "noData": "No data",
+    "strong": "Strong",
+    "moderate": "Moderate",
+    "atRisk": "At Risk"
+  },
+  "toasts": {
+    "errorTitle": "Error"
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "header": {
+    "title": "Enrolled Classes",
+    "description": "All the classes you've joined. Open one to see announcements, materials, and assignments."
+  },
+  "stats": {
+    "enrolledTitle": "Enrolled",
+    "enrolledDesc": "Active classes",
+    "subjectsTitle": "Subjects",
+    "subjectsDesc": "Unique subjects",
+    "teachersTitle": "Teachers",
+    "teachersDesc": "Instructors"
+  },
+  "joinCard": {
+    "title": "Join a new class",
+    "description": "Got an invite code from your teacher? Enter it below to request access.",
+    "codePlaceholder": "Class code",
+    "join": "Join"
+  },
+  "search": {
+    "placeholder": "Search by name, subject, teacher…",
+    "countOf": "{{filtered}} of {{total}}"
+  },
+  "card": {
+    "enrolled": "Enrolled",
+    "section": "Section {{section}}",
+    "open": "Open"
+  },
+  "empty": {
+    "noClassesTitle": "No classes yet",
+    "noClassesDesc": "You haven't joined any class. Ask your teacher for a class code, or use the form above to join one.",
+    "backToDashboard": "Back to dashboard",
+    "noMatchesTitle": "No matches",
+    "noMatchesDesc": "Nothing matches \"{{query}}\". Try a different search term."
+  },
+  "toasts": {
+    "enterCode": "Enter a class code",
+    "joined": "Joined!",
+    "couldNotJoin": "Could not join",
+    "networkError": "Network error — please retry."
+  }
+}

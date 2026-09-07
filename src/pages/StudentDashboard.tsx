@@ -31,10 +31,13 @@ import {
   Loader2, Printer, Target, FileText, ClipboardList, Pin,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "react-i18next";
+import { loadPageNamespace } from "@/i18n";
 import { format } from "date-fns";
 import {
   getClassrooms, getEnrollments, requestJoinClass,
   getClassroomMaterials, ClassroomMaterial, leaveClassroom,
+  refreshClassrooms, migrateLegacyClassroomsIfNeeded,
 } from "@/utils/mockClassrooms";
 
 /* ─── Types ─── */
@@ -105,6 +108,13 @@ export default function StudentDashboard() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  // `pages` namespace + `studentDashboard:` prefix → resolves to the
+  // student dashboard's per-page bundle. `loaded: Set` inside the
+  // loader makes this idempotent on remount.
+  const { t } = useTranslation("pages");
+  useEffect(() => {
+    void loadPageNamespace("studentDashboard");
+  }, []);
 
   const [selectedClass, setSelectedClass] = useState<ClassData | null>(null);
   const [joinOpen, setJoinOpen] = useState(false);
@@ -122,6 +132,7 @@ export default function StudentDashboard() {
   const [isAnnouncing, setIsAnnouncing] = useState(false);
   const [announceTitle, setAnnounceTitle] = useState("");
   const [announceContent, setAnnounceContent] = useState("");
+  const [joining, setJoining] = useState(false);
 
   const createAnnouncementMutation = useMutation({
     mutationFn: async () => {
@@ -137,40 +148,53 @@ export default function StudentDashboard() {
       setIsAnnouncing(false);
       setAnnounceTitle("");
       setAnnounceContent("");
-      toast({ title: "Announcement posted!" });
+      toast({ title: t("studentDashboard:toasts.announcementPosted") });
     },
-    onError: (e: Error) => toast({ title: "Failed to post", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("studentDashboard:toasts.error"), description: e.message, variant: "destructive" }),
   });
 
   const userName = user?.email?.split("@")[0]?.replace(/\./g, " ") || "Student";
 
   /* ── Sync local (mock) classrooms ── */
+  const sync = () => {
+    const enrollments = getEnrollments();
+    const dbClasses = getClassrooms();
+    setMaterials(getClassroomMaterials());
+    const enrolledDbClasses = dbClasses
+      .filter((c) =>
+        enrollments.some((e) => e.classroomId === c.id && e.studentName === userName)
+      )
+      .map((c) => ({
+        id: c.id,
+        name: c.name,
+        section: c.section,
+        subject: c.subject,
+        teacher_name: c.teacherName,
+        bannerColor: c.bannerColor,
+        cardColor: c.cardColor,
+      }));
+    setLocalClasses(enrolledDbClasses);
+  };
+
   useEffect(() => {
-    const syncLocalClasses = () => {
-      const enrollments = getEnrollments();
-      const dbClasses = getClassrooms();
-      setMaterials(getClassroomMaterials());
-      const enrolledDbClasses = dbClasses
-        .filter((c) =>
-          enrollments.some((e) => e.classroomId === c.id && e.studentName === userName)
-        )
-        .map((c) => ({
-          id: c.id,
-          name: c.name,
-          section: c.section,
-          subject: c.subject,
-          teacher_name: c.teacherName,
-          bannerColor: c.bannerColor,
-          cardColor: c.cardColor,
-        }));
-      setLocalClasses(enrolledDbClasses);
-    };
-    syncLocalClasses();
-    window.addEventListener("classroomSync", syncLocalClasses);
-    window.addEventListener("storage", syncLocalClasses);
+    sync();
+    // One-time migration of any legacy localStorage classrooms to the
+    // backend, then pull the authoritative list back into the cache.
+    (async () => {
+      try {
+        await migrateLegacyClassroomsIfNeeded();
+        await refreshClassrooms();
+        sync();
+      } catch (e) {
+        // Non-fatal — sync continues to work from cache.
+        console.warn("Classroom sync/migration failed", e);
+      }
+    })();
+    window.addEventListener("classroomSync", sync);
+    window.addEventListener("storage", sync);
     return () => {
-      window.removeEventListener("classroomSync", syncLocalClasses);
-      window.removeEventListener("storage", syncLocalClasses);
+      window.removeEventListener("classroomSync", sync);
+      window.removeEventListener("storage", sync);
     };
   }, [userName]);
 
@@ -283,15 +307,29 @@ export default function StudentDashboard() {
   const recentAnnouncements = allAnnouncements.slice(0, 5);
 
   /* ── Join class ── */
-  const handleJoin = () => {
+  const handleJoin = async () => {
     if (!joinCode.trim()) return;
-    const res = requestJoinClass(joinCode.trim(), userName);
-    if (res.success) {
-      toast({ title: "Success", description: res.msg });
-      setJoinCode("");
-      setJoinOpen(false);
-    } else {
-      toast({ title: "Failed to join", description: res.msg, variant: "destructive" });
+    setJoining(true);
+    try {
+      const res = await requestJoinClass(joinCode.trim(), userName);
+      if (res.success) {
+        toast({ title: t("studentDashboard:toasts.joinRequested"), description: res.msg });
+        setJoinCode("");
+        setJoinOpen(false);
+        // Refresh so the newly-joined class shows up in the active list
+        await refreshClassrooms();
+        sync();
+      } else {
+        toast({ title: t("studentDashboard:toasts.joinFailed"), description: res.msg, variant: "destructive" });
+      }
+    } catch (e) {
+      toast({
+        title: t("studentDashboard:toasts.joinFailed"),
+        description: e instanceof Error ? e.message : "Network error — please retry.",
+        variant: "destructive",
+      });
+    } finally {
+      setJoining(false);
     }
   };
 
@@ -309,10 +347,10 @@ export default function StudentDashboard() {
     onSuccess: ({ frontendId }) => {
       setSubmittedMap((prev) => ({ ...prev, [frontendId]: Date.now() }));
       queryClient.invalidateQueries({ queryKey: ["student-assignments"] });
-      toast({ title: "Submitted! ✓", description: "Your assignment PDF was uploaded." });
+      toast({ title: t("studentDashboard:toasts.submissionUploaded"), description: t("studentDashboard:toasts.submissionUploadedDesc") });
     },
     onError: (e: Error) =>
-      toast({ title: "Upload failed", description: e.message, variant: "destructive" }),
+      toast({ title: t("studentDashboard:toasts.submissionFailed"), description: e.message, variant: "destructive" }),
   });
 
   /* ── Leave class ── */
@@ -367,11 +405,11 @@ export default function StudentDashboard() {
               {/* Class Tabs */}
               <div className="flex items-center gap-6 border-b border-slate-200 mt-2 mb-6 px-2 overflow-x-auto hide-scrollbar">
                 {[
-                  { id: "stream", label: "Stream" },
-                  { id: "classwork", label: "Classwork & Files" },
-                  { id: "members", label: "People" },
-                  { id: "scores", label: "Scores" },
-                  { id: "analytics", label: "Analytics" },
+                  { id: "stream", label: t("studentDashboard:tabs.stream") },
+                  { id: "classwork", label: t("studentDashboard:tabs.classwork") },
+                  { id: "members", label: t("studentDashboard:tabs.people") },
+                  { id: "scores", label: t("studentDashboard:tabs.scores") },
+                  { id: "analytics", label: t("studentDashboard:tabs.analytics") },
                 ].map((tab) => (
                   <button
                     key={tab.id}
@@ -393,11 +431,11 @@ export default function StudentDashboard() {
                   <div className="hidden lg:block space-y-4">
                     <Card className="shadow-none border border-slate-200">
                       <CardHeader className="py-4 px-5">
-                        <CardTitle className="text-sm font-semibold">Upcoming</CardTitle>
+                        <CardTitle className="text-sm font-semibold">{t("studentDashboard:sidebar.upcoming")}</CardTitle>
                       </CardHeader>
                       <CardContent className="px-5 pb-5 pt-0">
                         {allAssignments.filter((a) => isAssignmentForClass(a, classroomMode) && !a.done).length === 0 ? (
-                          <p className="text-xs text-muted-foreground italic">Woohoo, no work due soon!</p>
+                          <p className="text-xs text-muted-foreground italic">{t("studentDashboard:sidebar.noUpcoming")}</p>
                         ) : (
                           <div className="space-y-3">
                             {allAssignments
@@ -406,7 +444,7 @@ export default function StudentDashboard() {
                               .map((a) => (
                                 <div key={a.id} className="text-xs">
                                   <p className="font-medium hover:underline cursor-pointer" onClick={() => setViewingAssignment(a)}>{a.title}</p>
-                                  <p className="text-slate-400 mt-0.5">Due {a.due}</p>
+                                  <p className="text-slate-400 mt-0.5">{t("studentDashboard:sidebar.due", { date: a.due })}</p>
                                 </div>
                               ))}
                           </div>
@@ -422,24 +460,24 @@ export default function StudentDashboard() {
                       <Card className="shadow-none border border-slate-200">
                         <CardContent className="p-4 space-y-4">
                           <Input
-                            placeholder="Announcement Title (optional)"
+                            placeholder={t("studentDashboard:stream.announceTitle")}
                             value={announceTitle}
                             onChange={(e) => setAnnounceTitle(e.target.value)}
                             className="bg-muted/30"
                           />
                           <Textarea
-                            placeholder="Announce something to your class"
+                            placeholder={t("studentDashboard:stream.announcePlaceholder")}
                             value={announceContent}
                             onChange={(e) => setAnnounceContent(e.target.value)}
                             className="min-h-[100px] bg-muted/30"
                           />
                           <div className="flex justify-end gap-2">
-                            <Button variant="ghost" onClick={() => setIsAnnouncing(false)}>Cancel</Button>
+                            <Button variant="ghost" onClick={() => setIsAnnouncing(false)}>{t("studentDashboard:stream.cancel")}</Button>
                             <Button
                               onClick={() => createAnnouncementMutation.mutate()}
                               disabled={createAnnouncementMutation.isPending || !announceContent.trim()}
                             >
-                              Post
+                              {t("studentDashboard:stream.post")}
                             </Button>
                           </div>
                         </CardContent>
@@ -453,7 +491,7 @@ export default function StudentDashboard() {
                           <div className="h-10 w-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 font-bold shrink-0">
                             {getInitials(userName)}
                           </div>
-                          <p className="text-sm text-muted-foreground">Announce something to your class</p>
+                          <p className="text-sm text-muted-foreground">{t("studentDashboard:stream.announcePlaceholder")}</p>
                         </CardContent>
                       </Card>
                     )}
@@ -482,8 +520,7 @@ export default function StudentDashboard() {
                         return (
                           <div className="flex flex-col items-center justify-center py-20 bg-muted/20 rounded-xl border border-dashed text-muted-foreground">
                             <Megaphone className="h-10 w-10 mb-2 opacity-20" />
-                            <p className="text-sm">This classroom is quiet for now.</p>
-                            <p className="text-xs mt-1 opacity-70">Assignments posted by your teacher will appear here.</p>
+                            <p className="text-sm">{t("studentDashboard:stream.empty")}</p>
                           </div>
                         );
                       }
@@ -540,30 +577,49 @@ export default function StudentDashboard() {
                                 <div className="flex items-start justify-between gap-2">
                                   <div className="min-w-0">
                                     <h4 className="text-sm sm:text-base font-semibold truncate">
-                                      {allDisplayClasses.find((c) => c.id === classroomMode)?.teacher_name} posted a new assignment: {a.title}
+                                      {t("studentDashboard:stream.newAssignment", {
+                                        teacher: allDisplayClasses.find((c) => c.id === classroomMode)?.teacher_name,
+                                        title: a.title,
+                                      })}
                                     </h4>
                                     <p className="text-xs text-muted-foreground mt-0.5">
-                                      {a.created_at ? format(new Date(a.created_at), "MMM d") : "Posted today"} · Due {a.due}
-                                      {a.totalMarks ? ` · ${a.totalMarks} marks` : ""}
+                                      {a.created_at
+                                        ? format(new Date(a.created_at), "MMM d")
+                                        : t("studentDashboard:stream.postedToday")}
+                                      {" · "}
+                                      {t("studentDashboard:stream.due")} {a.due}
+                                      {a.totalMarks ? ` · ${t("studentDashboard:stream.marks", { count: a.totalMarks })}` : ""}
                                     </p>
                                   </div>
                                   {a.done && a.isLate && (
-                                    <Badge className="bg-rose-100 text-rose-700 border-none h-5 px-2 text-[10px] font-bold shrink-0">⚠ LATE</Badge>
+                                    <Badge className="bg-rose-100 text-rose-700 border-none h-5 px-2 text-[10px] font-bold shrink-0">
+                                      {t("studentDashboard:stream.badgeLate")}
+                                    </Badge>
                                   )}
                                   {a.done && !a.isLate && (
-                                    <Badge className="bg-emerald-50 text-emerald-700 border-none h-5 px-2 text-[10px] font-bold shrink-0">✓ SUBMITTED</Badge>
+                                    <Badge className="bg-emerald-50 text-emerald-700 border-none h-5 px-2 text-[10px] font-bold shrink-0">
+                                      {t("studentDashboard:stream.badgeSubmitted")}
+                                    </Badge>
                                   )}
                                   {!a.done && a.dueMs < Date.now() && (
-                                    <Badge className="bg-rose-50 text-rose-600 border-none h-5 px-2 text-[10px] font-bold shrink-0">OVERDUE</Badge>
+                                    <Badge className="bg-rose-50 text-rose-600 border-none h-5 px-2 text-[10px] font-bold shrink-0">
+                                      {t("studentDashboard:stream.badgeOverdue")}
+                                    </Badge>
                                   )}
                                 </div>
                                 {a.submittedAt && (
                                   <p className={`text-[10px] mt-1 font-medium ${a.isLate ? "text-rose-500" : "text-emerald-600"}`}>
-                                    Submitted{" "}
-                                    {new Date(a.submittedAt).toLocaleString("en-US", {
-                                      month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
-                                    })}
-                                    {a.isLate ? " (after deadline)" : " (on time)"}
+                                    {a.isLate
+                                      ? t("studentDashboard:stream.submittedAtLate", {
+                                          date: new Date(a.submittedAt).toLocaleString("en-US", {
+                                            month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
+                                          }),
+                                        })
+                                      : t("studentDashboard:stream.submittedAtOnTime", {
+                                          date: new Date(a.submittedAt).toLocaleString("en-US", {
+                                            month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
+                                          }),
+                                        })}
                                   </p>
                                 )}
                                 <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -572,7 +628,7 @@ export default function StudentDashboard() {
                                     className="h-8 rounded-full text-xs font-semibold px-4 border-slate-300"
                                     onClick={(e) => { e.stopPropagation(); setViewingAssignment(a); }}
                                   >
-                                    <FileText className="h-3.5 w-3.5 mr-1.5" /> View Paper
+                                    <FileText className="h-3.5 w-3.5 mr-1.5" /> {t("studentDashboard:stream.viewPaper")}
                                   </Button>
                                   <Button
                                     variant="ghost" size="sm"
@@ -581,7 +637,11 @@ export default function StudentDashboard() {
                                     disabled={uploadMutation.isPending}
                                   >
                                     <Upload className="h-3.5 w-3.5 mr-1.5" />
-                                    {a.done ? "Resubmit" : uploadMutation.isPending ? "Uploading…" : "Submit Work"}
+                                    {a.done
+                                      ? t("studentDashboard:stream.resubmit")
+                                      : uploadMutation.isPending
+                                        ? t("studentDashboard:stream.uploading")
+                                        : t("studentDashboard:stream.submitWork")}
                                     <input
                                       type="file" id={`feed-input-${a.id}`} className="hidden"
                                       onChange={(e) => {
@@ -607,12 +667,12 @@ export default function StudentDashboard() {
               {/* ── CLASSWORK & FILES TAB ── */}
               {activeClassTab === "classwork" && (
                 <div className="space-y-4 max-w-4xl mx-auto mt-4 px-2">
-                  <h2 className="text-xl font-bold border-b pb-4 mb-4">Classwork & Files</h2>
+                  <h2 className="text-xl font-bold border-b pb-4 mb-4">{t("studentDashboard:tabs.classwork")}</h2>
 
                   {/* Materials */}
                   {materials.filter((m) => m.classroomId === classroomMode).length > 0 && (
                     <div className="mb-6 space-y-3">
-                      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Course Materials</h3>
+                      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">{t("studentDashboard:classwork.materialsTitle")}</h3>
                       {materials
                         .filter((m) => m.classroomId === classroomMode)
                         .map((mat) => (
@@ -625,7 +685,10 @@ export default function StudentDashboard() {
                                 <div>
                                   <p className="font-semibold text-base">{mat.fileName}</p>
                                   <p className="text-xs text-muted-foreground mt-0.5">
-                                    Uploaded: {new Date(mat.uploadedAt).toLocaleDateString()} · {mat.fileSize}
+                                    {t("studentDashboard:classwork.uploaded", {
+                                      date: new Date(mat.uploadedAt).toLocaleDateString(),
+                                      size: mat.fileSize,
+                                    })}
                                   </p>
                                 </div>
                               </div>
@@ -643,13 +706,13 @@ export default function StudentDashboard() {
                                     }
                                   }}
                                 >
-                                  <FileText className="h-4 w-4 mr-2" /> View PDF
+                                  <FileText className="h-4 w-4 mr-2" /> {t("studentDashboard:classwork.viewPdf")}
                                 </Button>
                                 <Button
                                   size="sm"
                                   onClick={() => navigate("/chatbot", { state: { material: mat, classroom: allDisplayClasses.find((c) => c.id === classroomMode) } })}
                                 >
-                                  <Bot className="h-4 w-4 mr-2" /> Chat with PDF
+                                  <Bot className="h-4 w-4 mr-2" /> {t("studentDashboard:classwork.chatWithPdf")}
                                 </Button>
                               </div>
                             </CardContent>
@@ -662,13 +725,13 @@ export default function StudentDashboard() {
                   {(() => {
                     const classAssignments = allAssignments.filter((a) => isAssignmentForClass(a, classroomMode));
                     if (classAssignments.length === 0 && materials.filter((m) => m.classroomId === classroomMode).length === 0) {
-                      return <p className="text-muted-foreground text-sm italic">No classwork or files posted yet.</p>;
+                      return <p className="text-muted-foreground text-sm italic">{t("studentDashboard:classwork.noClasswork")}</p>;
                     }
                     if (classAssignments.length === 0) return null;
                     const BACKEND_URL = (import.meta.env.VITE_API_URL || "http://localhost:8000/api").replace("/api", "");
                     return (
                       <div className="space-y-4">
-                        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Assignments</h3>
+                        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">{t("studentDashboard:classwork.assignmentsHeader")}</h3>
                         {classAssignments.map((a) => {
                           const isSubmitted = a.submission_status === "submitted" || a.submission_status === "graded" || a.done;
                           const isGraded = a.submission_status === "graded";
@@ -701,34 +764,38 @@ export default function StudentDashboard() {
                                         {/* Status badge */}
                                         {isGraded && (
                                           <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 border text-[10px] font-bold uppercase tracking-wider hover:bg-emerald-100">
-                                            ✓ Graded
+                                            ✓ {t("studentDashboard:classwork.graded")}
                                           </Badge>
                                         )}
                                         {isSubmitted && !isGraded && (
                                           <Badge className="bg-blue-100 text-blue-700 border-blue-200 border text-[10px] font-bold uppercase tracking-wider hover:bg-blue-100">
-                                            ✓ Submitted
+                                            ✓ {t("studentDashboard:classwork.submitted")}
                                           </Badge>
                                         )}
                                         {!isSubmitted && a.dueMs < Date.now() && (
                                           <Badge variant="destructive" className="text-[10px] font-bold uppercase tracking-wider">
-                                            Overdue
+                                            {t("studentDashboard:classwork.overdue")}
                                           </Badge>
                                         )}
                                         {!isSubmitted && a.dueMs > Date.now() && (
                                           <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider text-amber-600 border-amber-300 bg-amber-50">
-                                            Pending
+                                            {t("studentDashboard:classwork.pending")}
                                           </Badge>
                                         )}
                                       </div>
                                       <p className="text-xs text-muted-foreground mt-1">
-                                        Due: {a.due}
-                                        {a.totalMarks ? ` · ${a.totalMarks} marks` : ""}
+                                        {t("studentDashboard:classwork.due", { date: a.due })}
+                                        {a.totalMarks ? ` · ${t("studentDashboard:stream.marks", { count: a.totalMarks })}` : ""}
                                         {isGraded && a.score != null && (
-                                          <span className="ml-2 font-bold text-emerald-700">· Score: {a.score}/{a.totalMarks ?? "?"}</span>
+                                          <span className="ml-2 font-bold text-emerald-700">
+                                            · {t("studentDashboard:classwork.score", { score: a.score, total: a.totalMarks ?? "?" })}
+                                          </span>
                                         )}
                                         {isSubmitted && a.submitted_at_iso && (
                                           <span className="ml-2">
-                                            · Submitted {new Date(a.submitted_at_iso).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                                            · {t("studentDashboard:classwork.submittedAt", {
+                                              date: new Date(a.submitted_at_iso).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
+                                            })}
                                           </span>
                                         )}
                                       </p>
@@ -742,7 +809,7 @@ export default function StudentDashboard() {
                                   <div className="flex items-center gap-2 flex-shrink-0">
                                     {/* View Questions paper */}
                                     <Button variant="outline" size="sm" className="text-xs h-8 gap-1.5" onClick={() => setViewingAssignment(a)}>
-                                      <FileText className="h-3.5 w-3.5" /> View Paper
+                                      <FileText className="h-3.5 w-3.5" /> {t("studentDashboard:classwork.viewPaper")}
                                     </Button>
 
                                     {/* View submitted PDF */}
@@ -752,7 +819,7 @@ export default function StudentDashboard() {
                                         className="text-xs h-8 gap-1.5 border-blue-300 text-blue-700 hover:bg-blue-50"
                                         onClick={() => window.open(pdfUrl, "_blank")}
                                       >
-                                        <FileCheck className="h-3.5 w-3.5" /> My Submission
+                                        <FileCheck className="h-3.5 w-3.5" /> {t("studentDashboard:classwork.mySubmission")}
                                       </Button>
                                     )}
 
@@ -777,10 +844,10 @@ export default function StudentDashboard() {
                                         onClick={() => document.getElementById(`classwork-file-${a.id}`)?.click()}
                                       >
                                         {uploadMutation.isPending
-                                          ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Uploading…</>
+                                          ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("studentDashboard:classwork.uploading")}</>
                                           : isSubmitted
-                                          ? <><Upload className="h-3.5 w-3.5" /> Resubmit</>
-                                          : <><Upload className="h-3.5 w-3.5" /> Submit PDF</>}
+                                          ? <><Upload className="h-3.5 w-3.5" /> {t("studentDashboard:stream.resubmit")}</>
+                                          : <><Upload className="h-3.5 w-3.5" /> {t("studentDashboard:classwork.submitPdf")}</>}
                                       </Button>
                                     </>
                                   </div>
@@ -799,11 +866,11 @@ export default function StudentDashboard() {
               {activeClassTab === "members" && (
                 <div className="max-w-2xl mx-auto space-y-10 mt-8 px-2">
                   <div>
-                    <h2 className="text-2xl font-bold text-primary border-b-2 border-primary/20 pb-3 mb-6">Teachers</h2>
+                    <h2 className="text-2xl font-bold text-primary border-b-2 border-primary/20 pb-3 mb-6">{t("studentDashboard:people.teachers")}</h2>
                     <div className="flex justify-between items-center px-2">
                       <div className="flex items-center gap-4">
                         <div className="h-12 w-12 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-500 text-lg shadow-sm border border-slate-300">
-                          {getInitials(allDisplayClasses.find((c) => c.id === classroomMode)?.teacher_name || "Teacher")}
+                          {getInitials(allDisplayClasses.find((c) => c.id === classroomMode)?.teacher_name || t("studentDashboard:defaults.teacher"))}
                         </div>
                         <p className="font-semibold text-lg">
                           {allDisplayClasses.find((c) => c.id === classroomMode)?.teacher_name}
@@ -813,9 +880,9 @@ export default function StudentDashboard() {
                   </div>
                   <div>
                     <div className="flex items-center justify-between border-b-2 border-primary/20 pb-3 mb-6">
-                      <h2 className="text-2xl font-bold text-primary">Classmates</h2>
+                      <h2 className="text-2xl font-bold text-primary">{t("studentDashboard:people.classmates")}</h2>
                       <span className="text-muted-foreground font-medium">
-                        {getEnrollments().filter((e) => e.classroomId === classroomMode).length} students
+                        {getEnrollments().filter((e) => e.classroomId === classroomMode).length} {t("studentDashboard:people.classmates").toLowerCase()}
                       </span>
                     </div>
                     <div className="space-y-2 px-2">
@@ -839,16 +906,16 @@ export default function StudentDashboard() {
               {/* ── SCORES TAB ── */}
               {activeClassTab === "scores" && (
                 <div className="space-y-6 max-w-4xl mx-auto mt-4 px-2">
-                  <h2 className="text-2xl font-bold" style={{ fontFamily: "var(--font-display)" }}>My Scores</h2>
+                  <h2 className="text-2xl font-bold" style={{ fontFamily: "var(--font-display)" }}>{t("studentDashboard:scores.title")}</h2>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {[
-                      { title: "Overall Average", val: "88%", desc: "Top 15% of class" },
+                      { title: t("studentDashboard:scores.average"), val: "88%", desc: t("studentDashboard:scores.averageDesc") },
                       {
-                        title: "Completed Work",
+                        title: t("studentDashboard:scores.completed"),
                         val: `${allAssignments.filter((a) => isAssignmentForClass(a, classroomMode) && a.done).length}/${allAssignments.filter((a) => isAssignmentForClass(a, classroomMode)).length}`,
-                        desc: "Assignments submitted",
+                        desc: t("studentDashboard:scores.completedDesc"),
                       },
-                      { title: "Predicted Grade", val: "A", desc: "Keep it up!" },
+                      { title: t("studentDashboard:scores.predicted"), val: "A", desc: t("studentDashboard:scores.predictedDesc") },
                     ].map((stat, i) => (
                       <Card key={i} className="border-slate-200/60 shadow-sm border-t-4 border-t-primary/60">
                         <CardHeader className="pb-2">
@@ -864,12 +931,12 @@ export default function StudentDashboard() {
                   <Card className="shadow-sm border-slate-200 pt-2">
                     <CardHeader>
                       <CardTitle className="text-lg flex items-center gap-2">
-                        <Target className="h-5 w-5 text-primary" /> Graded Assignments
+                        <Target className="h-5 w-5 text-primary" /> {t("studentDashboard:scores.gradedAssignments")}
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
                       {allAssignments.filter((a) => isAssignmentForClass(a, classroomMode) && a.done).length === 0 ? (
-                        <p className="text-muted-foreground text-sm italic py-4 text-center">No graded assignments yet.</p>
+                        <p className="text-muted-foreground text-sm italic py-4 text-center">{t("studentDashboard:scores.noGraded")}</p>
                       ) : (
                         allAssignments
                           .filter((a) => isAssignmentForClass(a, classroomMode) && a.done)
@@ -878,11 +945,11 @@ export default function StudentDashboard() {
                               <div>
                                 <p className="font-semibold text-slate-800">{a.title}</p>
                                 <p className="text-xs text-muted-foreground mt-1">
-                                  Submitted: {new Date(a.submittedAt || Date.now()).toLocaleDateString()}
+                                  {t("studentDashboard:scores.submitted", { date: new Date(a.submittedAt || Date.now()).toLocaleDateString() })}
                                 </p>
                               </div>
                               <div className="flex items-center gap-3">
-                                <Badge className="bg-emerald-100 hover:bg-emerald-100 text-emerald-700 border-none">Graded</Badge>
+                                <Badge className="bg-emerald-100 hover:bg-emerald-100 text-emerald-700 border-none">{t("studentDashboard:scores.graded")}</Badge>
                                 <span className="font-black text-lg text-emerald-600">
                                   {a.totalMarks ? `${Math.round(a.totalMarks * 0.88)}/${a.totalMarks}` : "85%"}
                                 </span>
@@ -899,7 +966,7 @@ export default function StudentDashboard() {
               {activeClassTab === "analytics" && (
                 <div className="space-y-6 max-w-4xl mx-auto mt-4 px-2">
                   <h2 className="text-2xl font-bold" style={{ fontFamily: "var(--font-display)" }}>
-                    Learning Efficiency Analytics
+                    {t("studentDashboard:analytics.title")}
                   </h2>
                   <Card className="bg-gradient-to-br from-indigo-50 to-purple-50 border-indigo-100 overflow-hidden relative shadow-sm">
                     <div className="absolute top-0 right-0 p-8 opacity-10">
@@ -907,26 +974,25 @@ export default function StudentDashboard() {
                     </div>
                     <CardContent className="p-8 sm:p-10 flex flex-col items-center justify-center text-center relative z-10">
                       <Badge className="bg-indigo-100 text-indigo-700 border-none hover:bg-indigo-100 mb-6 uppercase tracking-widest text-[10px] font-black">
-                        AI Insights
+                        {t("studentDashboard:analytics.aiInsights")}
                       </Badge>
                       <div className="h-36 w-36 rounded-full bg-white shadow-xl flex items-center justify-center mb-6 relative border border-indigo-50">
                         <div className="absolute inset-2 rounded-full border-[10px] border-indigo-600 border-t-indigo-200 border-r-indigo-100 rotate-45"></div>
                         <div className="flex flex-col items-center">
                           <span className="text-4xl font-extrabold text-indigo-900 tracking-tight">72</span>
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">LES Score</span>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("studentDashboard:analytics.lesScore")}</span>
                         </div>
                       </div>
-                      <h3 className="text-2xl font-bold text-slate-800 mb-2">Steady Learning Velocity</h3>
+                      <h3 className="text-2xl font-bold text-slate-800 mb-2">{t("studentDashboard:analytics.velocity")}</h3>
                       <p className="text-slate-600 max-w-xl text-sm leading-relaxed">
-                        Your Learning Efficiency Score (LES) for this subject indicates that your study hours are correlating well
-                        with your assignment scores. You might want to focus your next study session explicitly on{" "}
+                        {t("studentDashboard:analytics.velocityDesc")}{" "}
                         <span className="font-semibold text-indigo-700 bg-indigo-100 px-1 rounded">Lab Performance</span>.
                       </p>
                       <Button
                         onClick={() => navigate("/chatbot")}
                         className="mt-8 bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200 rounded-full px-6"
                       >
-                        <Target className="h-4 w-4 mr-2" /> Talk to AI Assistant
+                        <Target className="h-4 w-4 mr-2" /> {t("studentDashboard:analytics.talkToAi")}
                       </Button>
                     </CardContent>
                   </Card>
@@ -935,7 +1001,7 @@ export default function StudentDashboard() {
                       <div className="h-1 w-full bg-rose-500"></div>
                       <CardHeader className="bg-rose-50/50 pb-4">
                         <CardTitle className="text-base flex items-center gap-2 text-rose-900">
-                          <AlertCircle className="h-5 w-5 text-rose-500" /> Needs Attention
+                          <AlertCircle className="h-5 w-5 text-rose-500" /> {t("studentDashboard:analytics.needsAttention")}
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="pt-4 px-5">
@@ -944,7 +1010,7 @@ export default function StudentDashboard() {
                             <li key={t.topic} className="text-sm flex flex-col gap-1 p-3 bg-white border border-rose-100 shadow-sm rounded-lg">
                               <div className="flex justify-between items-center text-slate-800 font-medium">
                                 <span>{t.topic}</span>
-                                <Badge variant="outline" className="text-rose-600 border-rose-200 bg-rose-50">{t.pct}% mastery</Badge>
+                                <Badge variant="outline" className="text-rose-600 border-rose-200 bg-rose-50">{t.pct}{t("studentDashboard:analytics.mastery")}</Badge>
                               </div>
                               <Progress value={t.pct} className="h-1.5 mt-2 bg-rose-100" />
                             </li>
@@ -956,7 +1022,7 @@ export default function StudentDashboard() {
                       <div className="h-1 w-full bg-emerald-500"></div>
                       <CardHeader className="bg-emerald-50/50 pb-4">
                         <CardTitle className="text-base flex items-center gap-2 text-emerald-900">
-                          <CheckSquare className="h-5 w-5 text-emerald-500" /> Strong Concepts
+                          <CheckSquare className="h-5 w-5 text-emerald-500" /> {t("studentDashboard:analytics.strongConcepts")}
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="pt-4 px-5">
@@ -965,7 +1031,7 @@ export default function StudentDashboard() {
                             <li key={t.topic} className="text-sm flex flex-col gap-1 p-3 bg-white border border-emerald-100 shadow-sm rounded-lg">
                               <div className="flex justify-between items-center text-slate-800 font-medium">
                                 <span>{t.topic}</span>
-                                <Badge variant="outline" className="text-emerald-700 border-emerald-200 bg-emerald-50">{t.pct}% mastery</Badge>
+                                <Badge variant="outline" className="text-emerald-700 border-emerald-200 bg-emerald-50">{t.pct}{t("studentDashboard:analytics.mastery")}</Badge>
                               </div>
                               <Progress value={t.pct} className="h-1.5 mt-2 bg-emerald-100" />
                             </li>
@@ -983,20 +1049,20 @@ export default function StudentDashboard() {
               <div className="gc-topbar">
                 <div>
                   <h1 className="gc-greeting">
-                    Welcome back, <span className="gc-name">{userName}</span> 👋
+                    {t("studentDashboard:header.greeting")}, <span className="gc-name">{userName}</span> 👋
                   </h1>
-                  <p className="gc-sub">Here are your enrolled classes</p>
+                  <p className="gc-sub">{t("studentDashboard:header.sub")}</p>
                 </div>
                 <Button className="gc-join-btn" onClick={() => setJoinOpen(true)}>
-                  <Plus className="gc-btn-icon" /> Join Class
+                  <Plus className="gc-btn-icon" /> {t("studentDashboard:home.joinClass")}
                 </Button>
               </div>
 
               {allDisplayClasses.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 bg-muted/20 rounded-xl border border-dashed text-muted-foreground mb-8">
                   <BookOpen className="h-12 w-12 mb-3 opacity-20" />
-                  <p className="text-sm font-medium">You haven't joined any classes yet</p>
-                  <p className="text-xs mt-1">Ask your teacher for a class code and click "Join Class"</p>
+                  <p className="text-sm font-medium">{t("studentDashboard:home.noClasses")}</p>
+                  <p className="text-xs mt-1">{t("studentDashboard:home.noClassesDescription")}</p>
                 </div>
               ) : (
                 <div className="gc-grid">
@@ -1019,17 +1085,17 @@ export default function StudentDashboard() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="gc-dropdown">
                               <DropdownMenuItem className="gc-dd-item" onClick={() => { setClassroomMode(cls.id); setSelectedClass(null); }}>
-                                <BookOpen className="h-4 w-4" /> Open Classroom
+                                <BookOpen className="h-4 w-4" /> {t("studentDashboard:home.openClassroom")}
                               </DropdownMenuItem>
                               <DropdownMenuItem className="gc-dd-item" onClick={() => navigate("/analytics")}>
-                                <TrendingUp className="h-4 w-4" /> Analytics
+                                <TrendingUp className="h-4 w-4" /> {t("studentDashboard:home.viewAnalytics")}
                               </DropdownMenuItem>
                               <DropdownMenuItem className="gc-dd-item" onClick={() => navigate("/chatbot")}>
-                                <Bot className="h-4 w-4" /> AI Assistant
+                                <Bot className="h-4 w-4" /> {t("studentDashboard:home.aiAssistant")}
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem className="gc-dd-item gc-dd-leave" onClick={(e) => { e.stopPropagation(); setClassToLeave(cls); }}>
-                                <X className="h-4 w-4" /> Unenroll
+                                <X className="h-4 w-4" /> {t("studentDashboard:home.unenroll")}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -1068,10 +1134,10 @@ export default function StudentDashboard() {
           <div className="gc-widget">
             <div className="gc-widget-tabs">
               <button className={`gc-tab ${activeTab === "todo" ? "gc-tab-active" : ""}`} onClick={() => setActiveTab("todo")}>
-                To do {pendingAssignments.length > 0 && <span className="ml-1 gc-badge-count">{pendingAssignments.length}</span>}
+                {t("studentDashboard:sidebar.toDo")} {pendingAssignments.length > 0 && <span className="ml-1 gc-badge-count">{pendingAssignments.length}</span>}
               </button>
               <button className={`gc-tab ${activeTab === "reviewed" ? "gc-tab-active" : ""}`} onClick={() => setActiveTab("reviewed")}>
-                Reviewed
+                {t("studentDashboard:sidebar.reviewed")}
               </button>
             </div>
             <div className="gc-todo-list">
@@ -1079,7 +1145,7 @@ export default function StudentDashboard() {
                 (pendingAssignments.length === 0 ? (
                   <div className="gc-empty">
                     <CheckSquare className="h-10 w-10 gc-empty-icon" />
-                    <p>No work due. Enjoy your day!</p>
+                    <p>{t("studentDashboard:sidebar.noToDo")}</p>
                   </div>
                 ) : (
                   pendingAssignments.map((a) => (
@@ -1108,9 +1174,9 @@ export default function StudentDashboard() {
                         )}
                         <div className="gc-todo-due">
                           <Clock className="h-3 w-3" />
-                          <span>Due {a.due}</span>
+                          <span>{t("studentDashboard:sidebar.due", { date: a.due })}</span>
                           {a.totalMarks && (
-                            <span style={{ fontSize: "10px", color: "hsl(var(--muted-foreground))" }}>· {a.totalMarks} marks</span>
+                            <span style={{ fontSize: "10px", color: "hsl(var(--muted-foreground))" }}>· {t("studentDashboard:stream.marks", { count: a.totalMarks })}</span>
                           )}
                         </div>
                         {a.isReal && (
@@ -1119,7 +1185,7 @@ export default function StudentDashboard() {
                               onClick={(e) => { e.stopPropagation(); setViewingAssignment(a); }}
                               style={{ fontSize: "11px", fontWeight: 600, background: "hsl(var(--primary)/0.08)", color: "hsl(var(--primary))", border: "1px solid hsl(var(--primary)/0.25)", borderRadius: "6px", padding: "3px 10px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
                             >
-                              <FileText className="h-3 w-3" /> View Questions
+                              <FileText className="h-3 w-3" /> {t("studentDashboard:stream.viewAssignment")}
                             </span>
                           </div>
                         )}
@@ -1131,7 +1197,7 @@ export default function StudentDashboard() {
                 (doneAssignments.length === 0 ? (
                   <div className="gc-empty">
                     <Star className="h-10 w-10 gc-empty-icon" />
-                    <p>No reviewed work yet.</p>
+                    <p>{t("studentDashboard:sidebar.noReviewed")}</p>
                   </div>
                 ) : (
                   doneAssignments.map((a) => (
@@ -1142,7 +1208,7 @@ export default function StudentDashboard() {
                       <div className="gc-todo-info">
                         <p className="gc-todo-title">{a.title}</p>
                         <p className="gc-todo-class">{a.className}</p>
-                        <span className="gc-badge-done">Submitted</span>
+                        <span className="gc-badge-done">{t("studentDashboard:stream.submitted")}</span>
                       </div>
                     </div>
                   ))
@@ -1153,10 +1219,10 @@ export default function StudentDashboard() {
           {/* ── Upcoming widget ── */}
           <div className="gc-widget gc-upcoming">
             <h3 className="gc-widget-title">
-              <Clock className="h-4 w-4" /> Upcoming
+              <Clock className="h-4 w-4" /> {t("studentDashboard:sidebar.upcoming")}
             </h3>
             {pendingAssignments.length === 0 ? (
-              <p className="gc-upcoming-empty">No upcoming work 🎉</p>
+              <p className="gc-upcoming-empty">{t("studentDashboard:sidebar.noUpcoming")}</p>
             ) : (
               pendingAssignments.slice(0, 4).map((a) => (
                 <div key={a.id} className="gc-upcoming-item" onClick={() => setViewingAssignment(a)} style={{ cursor: "pointer" }}>
@@ -1164,8 +1230,8 @@ export default function StudentDashboard() {
                   <div>
                     <p className="gc-upcoming-name">{a.title}</p>
                     <p className="gc-upcoming-meta">
-                      {a.className} · Due {a.due}
-                      {a.dueMs < Date.now() && <span className="gc-overdue-tag"> · Overdue</span>}
+                      {a.className} · {t("studentDashboard:sidebar.due", { date: a.due })}
+                      {a.dueMs < Date.now() && <span className="gc-overdue-tag"> · {t("studentDashboard:stream.overdue")}</span>}
                     </p>
                   </div>
                 </div>
@@ -1176,21 +1242,21 @@ export default function StudentDashboard() {
           {/* ── Announcements widget ── */}
           <div className="gc-widget gc-upcoming">
             <h3 className="gc-widget-title" style={{ color: "hsl(var(--primary))" }}>
-              <Megaphone className="h-4 w-4" /> Announcements
+              <Megaphone className="h-4 w-4" /> {t("studentDashboard:sidebar.announcements")}
             </h3>
             {recentAnnouncements.length === 0 ? (
-              <p className="gc-upcoming-empty">No announcements yet.</p>
+              <p className="gc-upcoming-empty">{t("studentDashboard:sidebar.noAnnouncements")}</p>
             ) : (
               <div className="space-y-4">
                 {recentAnnouncements.map((ann) => (
                   <div key={ann.id} className="border-l-2 border-amber-400 pl-3">
                     <div className="flex justify-between items-start">
-                      <p className="font-semibold text-sm line-clamp-1 flex-1">{ann.title || "Announcement"}</p>
+                      <p className="font-semibold text-sm line-clamp-1 flex-1">{ann.title || t("studentDashboard:sidebar.announcements")}</p>
                       {ann.pinned && <Pin className="h-3 w-3 text-primary shrink-0 ml-1" />}
                     </div>
                     <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{ann.content}</p>
                     <p className="text-[10px] font-medium text-muted-foreground/60 mt-1">
-                      {ann.author_name || "Teacher"} · {format(new Date(ann.created_at), "MMM d")}
+                      {ann.author_name || t("studentDashboard:defaults.teacher")} · {format(new Date(ann.created_at), "MMM d")}
                       {ann.classroom_name && <span> · {ann.classroom_name}</span>}
                     </p>
                   </div>
@@ -1221,14 +1287,14 @@ export default function StudentDashboard() {
                 <div className="gc-modal-avatar">{getInitials(selectedClass.teacher_name)}</div>
                 <div>
                   <p className="gc-modal-teacher">{selectedClass.teacher_name}</p>
-                  <p className="gc-modal-role">Class Teacher</p>
+                  <p className="gc-modal-role">{t("studentDashboard:modals.classTeacher")}</p>
                 </div>
               </div>
               <div className="gc-modal-stats">
                 {[
-                  { label: "Students", value: getEnrollments().filter((e) => e.classroomId === selectedClass.id).length.toString() },
-                  { label: "Assignments", value: allAssignments.filter((a) => isAssignmentForClass(a, selectedClass.id)).length.toString() },
-                  { label: "Submitted", value: allAssignments.filter((a) => isAssignmentForClass(a, selectedClass.id) && a.done).length.toString() },
+                  { label: t("studentDashboard:modals.students"), value: getEnrollments().filter((e) => e.classroomId === selectedClass.id).length.toString() },
+                  { label: t("studentDashboard:modals.assignments"), value: allAssignments.filter((a) => isAssignmentForClass(a, selectedClass.id)).length.toString() },
+                  { label: t("studentDashboard:modals.submitted"), value: allAssignments.filter((a) => isAssignmentForClass(a, selectedClass.id) && a.done).length.toString() },
                 ].map((s) => (
                   <div key={s.label} className="gc-stat-card">
                     <p className="gc-stat-val">{s.value}</p>
@@ -1238,9 +1304,9 @@ export default function StudentDashboard() {
               </div>
               {/* Pending assignments in this class */}
               <div className="mt-4 border-t pt-4 px-6 pb-2">
-                <p className="text-sm font-semibold mb-3 flex items-center gap-2"><Upload className="h-4 w-4" /> Submit Assignment</p>
+                <p className="text-sm font-semibold mb-3 flex items-center gap-2"><Upload className="h-4 w-4" /> {t("studentDashboard:assignmentPaper.submitAssignment")}</p>
                 {allAssignments.filter((a) => isAssignmentForClass(a, selectedClass?.id) && !a.done).length === 0 ? (
-                  <p className="text-xs text-muted-foreground">No pending assignments for this class.</p>
+                  <p className="text-xs text-muted-foreground">{t("studentDashboard:assignmentPaper.noPending")}</p>
                 ) : (
                   <div className="space-y-2">
                     {allAssignments.filter((a) => isAssignmentForClass(a, selectedClass?.id) && !a.done).map((a) => (
@@ -1248,10 +1314,10 @@ export default function StudentDashboard() {
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="font-medium">{a.title}</p>
-                            <p className="text-xs text-muted-foreground">Due {a.due}{a.totalMarks ? ` · ${a.totalMarks}m` : ""}</p>
+                            <p className="text-xs text-muted-foreground">{t("studentDashboard:sidebar.due", { date: a.due })}{a.totalMarks ? ` · ${t("studentDashboard:stream.marks", { count: a.totalMarks })}` : ""}</p>
                           </div>
                           <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer" onClick={() => setViewingAssignment(a)}>
-                            <FileText className="h-3 w-3 mr-1" /> View Paper
+                            <FileText className="h-3 w-3 mr-1" /> {t("studentDashboard:assignmentPaper.viewPaper")}
                           </Badge>
                         </div>
                         <div className="flex gap-2">
@@ -1265,9 +1331,9 @@ export default function StudentDashboard() {
                             <Button variant="outline" size="sm" className="w-full text-xs h-8" asChild disabled={uploadMutation.isPending}>
                               <span className="cursor-pointer">
                                 {uploadMutation.isPending ? (
-                                  <><Loader2 className="h-3 w-3 mr-1.5 animate-spin" />Uploading...</>
+                                  <><Loader2 className="h-3 w-3 mr-1.5 animate-spin" />{t("studentDashboard:assignmentPaper.uploading")}</>
                                 ) : (
-                                  <><Upload className="h-3 w-3 mr-1.5" />Submit PDF Solution</>
+                                  <><Upload className="h-3 w-3 mr-1.5" />{t("studentDashboard:assignmentPaper.submitPdf")}</>
                                 )}
                               </span>
                             </Button>
@@ -1280,10 +1346,10 @@ export default function StudentDashboard() {
               </div>
               <div className="gc-modal-actions">
                 <Button className="gc-primary-btn" onClick={() => { setClassroomMode(selectedClass.id); setSelectedClass(null); }}>
-                  Open Classroom <ChevronRight className="h-4 w-4" />
+                  {t("studentDashboard:modals.openClassroom")} <ChevronRight className="h-4 w-4" />
                 </Button>
                 <Button variant="outline" className="gc-secondary-btn" onClick={() => { setSelectedClass(null); }}>
-                  Close
+                  {t("studentDashboard:modals.close")}
                 </Button>
               </div>
             </div>
@@ -1296,7 +1362,7 @@ export default function StudentDashboard() {
         <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>{viewingMaterialText?.title}</DialogTitle>
-            <DialogDescription>Extracted text representation.</DialogDescription>
+            <DialogDescription>{t("studentDashboard:classwork.viewPdf")}</DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto p-4 bg-muted/30 rounded-md whitespace-pre-wrap font-mono text-sm">
             {viewingMaterialText?.content}
@@ -1308,17 +1374,19 @@ export default function StudentDashboard() {
       <Dialog open={joinOpen} onOpenChange={setJoinOpen}>
         <DialogContent className="gc-modal gc-join-modal">
           <DialogHeader>
-            <DialogTitle className="gc-modal-title">Join a class</DialogTitle>
-            <DialogDescription className="gc-modal-desc">Ask your teacher for the class code, then enter it here.</DialogDescription>
+            <DialogTitle className="gc-modal-title">{t("studentDashboard:modals.joinClassTitle")}</DialogTitle>
+            <DialogDescription className="gc-modal-desc">{t("studentDashboard:modals.joinClassDesc")}</DialogDescription>
           </DialogHeader>
           <div className="gc-join-body">
-            <p className="gc-join-hint">Class code</p>
-            <input className="gc-join-input" placeholder="e.g. abc123" value={joinCode}
+            <p className="gc-join-hint">{t("studentDashboard:modals.classCode")}</p>
+            <input className="gc-join-input" placeholder={t("studentDashboard:modals.classCodePlaceholder")} value={joinCode}
               onChange={(e) => setJoinCode(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleJoin()} />
-            <p className="gc-join-note">Use a class code that's 5–7 letters or numbers with no spaces or symbols.</p>
+            <p className="gc-join-note">{t("studentDashboard:modals.joinClassHint")}</p>
             <div className="gc-join-actions">
-              <Button variant="outline" onClick={() => setJoinOpen(false)}>Cancel</Button>
-              <Button disabled={!joinCode.trim()} onClick={handleJoin}>Join</Button>
+              <Button variant="outline" onClick={() => setJoinOpen(false)}>{t("studentDashboard:modals.cancel")}</Button>
+              <Button disabled={!joinCode.trim() || joining} onClick={handleJoin}>
+                {joining ? t("studentDashboard:modals.joining") : t("studentDashboard:modals.join")}
+              </Button>
             </div>
           </div>
         </DialogContent>
@@ -1328,15 +1396,15 @@ export default function StudentDashboard() {
       <Dialog open={!!classToLeave} onOpenChange={(open) => !open && setClassToLeave(null)}>
         <DialogContent className="gc-modal gc-join-modal">
           <DialogHeader>
-            <DialogTitle className="gc-modal-title">Unenroll</DialogTitle>
+            <DialogTitle className="gc-modal-title">{t("studentDashboard:modals.unenroll")}</DialogTitle>
             <DialogDescription className="gc-modal-desc mt-2">
-              Are you sure you want to unenroll from {classToLeave?.name}?
+              {t("studentDashboard:modals.unenrollDesc", { name: classToLeave?.name })}
             </DialogDescription>
           </DialogHeader>
           <div className="gc-join-body pt-2">
             <div className="gc-join-actions mt-4">
-              <Button variant="outline" onClick={() => setClassToLeave(null)}>Cancel</Button>
-              <Button variant="destructive" onClick={handleLeaveClass}>Unenroll</Button>
+              <Button variant="outline" onClick={() => setClassToLeave(null)}>{t("studentDashboard:modals.cancel")}</Button>
+              <Button variant="destructive" onClick={handleLeaveClass}>{t("studentDashboard:modals.unenroll")}</Button>
             </div>
           </div>
         </DialogContent>
@@ -1348,22 +1416,22 @@ export default function StudentDashboard() {
           {viewingAssignment && (
             <div className="bg-white text-slate-900 min-h-full">
               <div className="bg-slate-900 text-white p-8 text-center space-y-2 border-b-4 border-primary">
-                <p className="text-xs uppercase tracking-widest text-slate-400 font-bold">Assignment Question Paper</p>
+                <p className="text-xs uppercase tracking-widest text-slate-400 font-bold">{t("studentDashboard:assignmentPaper.headerKicker")}</p>
                 <h2 className="text-3xl font-extrabold">{viewingAssignment.title}</h2>
                 <p className="text-slate-300 font-medium">{viewingAssignment.className}</p>
                 <div className="flex items-center justify-center gap-6 mt-4 pt-4 border-t border-white/10 text-sm">
-                  <div className="flex items-center gap-1.5"><Clock className="h-4 w-4 text-primary" /><span>Due: <strong>{viewingAssignment.due}</strong></span></div>
-                  <div className="flex items-center gap-1.5"><Target className="h-4 w-4 text-primary" /><span>Max Marks: <strong>{viewingAssignment.totalMarks || "N/A"}</strong></span></div>
+                  <div className="flex items-center gap-1.5"><Clock className="h-4 w-4 text-primary" /><span>{t("studentDashboard:assignmentPaper.due", { date: viewingAssignment.due })}</span></div>
+                  <div className="flex items-center gap-1.5"><Target className="h-4 w-4 text-primary" /><span>{t("studentDashboard:assignmentPaper.maxMarks", { marks: viewingAssignment.totalMarks || "N/A" })}</span></div>
                 </div>
               </div>
               <div className="px-8 py-4 bg-slate-50 border-b italic text-slate-600 text-sm">
-                <strong>Instructions:</strong> Read each question carefully before attempting. Submit your solutions in PDF format before the deadline.
+                <strong>{t("studentDashboard:assignmentPaper.instructions")}</strong> {t("studentDashboard:assignmentPaper.instructionsText")}
               </div>
               <div className="p-8 space-y-8">
                 {(!viewingAssignment.questions || viewingAssignment.questions.length === 0) ? (
                   <div className="flex flex-col items-center justify-center py-12 text-slate-400">
                     <AlertCircle className="h-10 w-10 mb-2 opacity-20" />
-                    <p>No questions found in this assignment.</p>
+                    <p>{t("studentDashboard:assignmentPaper.noQuestions")}</p>
                   </div>
                 ) : (
                   viewingAssignment.questions.map((q, idx) => (
@@ -1372,7 +1440,7 @@ export default function StudentDashboard() {
                       <div className="flex-1 space-y-2">
                         <p className="text-lg leading-relaxed text-slate-800 font-medium">{q.question_text}</p>
                         <div className="flex items-center gap-3">
-                          <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider text-slate-500 border-slate-200">{q.marks} Marks</Badge>
+                          <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider text-slate-500 border-slate-200">{t("studentDashboard:assignmentPaper.marksBadge", { count: q.marks })}</Badge>
                           {q.difficulty && (
                             <Badge className={`text-[10px] font-bold uppercase tracking-wider ${q.difficulty === "hard" ? "bg-rose-100 text-rose-700 border-rose-200" : q.difficulty === "medium" ? "bg-amber-100 text-amber-700 border-amber-200" : "bg-emerald-100 text-emerald-700 border-emerald-200"}`}>
                               {q.difficulty}
@@ -1387,7 +1455,7 @@ export default function StudentDashboard() {
               </div>
               <div className="p-8 bg-slate-50 border-t flex items-center justify-between gap-3 flex-wrap">
                 <Button variant="outline" className="gap-2" onClick={() => window.print()}>
-                  <Printer className="h-4 w-4" /> Print Paper
+                  <Printer className="h-4 w-4" /> {t("studentDashboard:assignmentPaper.print")}
                 </Button>
                 <div className="flex items-center gap-3">
                   {viewingAssignment?.isReal && (
@@ -1400,11 +1468,11 @@ export default function StudentDashboard() {
                       />
                       <Button className="gap-2 bg-primary text-white font-bold px-6" disabled={uploadMutation.isPending}
                         onClick={() => document.getElementById("dialog-submit-file")?.click()}>
-                        {uploadMutation.isPending ? <><span className="animate-spin">⏳</span> Uploading...</> : viewingAssignment?.done ? <><Upload className="h-4 w-4" /> Resubmit PDF</> : <><Upload className="h-4 w-4" /> Submit PDF Solution</>}
+                        {uploadMutation.isPending ? <><span className="animate-spin">⏳</span> {t("studentDashboard:assignmentPaper.uploading")}</> : viewingAssignment?.done ? <><Upload className="h-4 w-4" /> {t("studentDashboard:assignmentPaper.resubmitPdf")}</> : <><Upload className="h-4 w-4" /> {t("studentDashboard:assignmentPaper.submitPdf")}</>}
                       </Button>
                     </>
                   )}
-                  <Button variant="ghost" onClick={() => setViewingAssignment(null)}>Close</Button>
+                  <Button variant="ghost" onClick={() => setViewingAssignment(null)}>{t("studentDashboard:assignmentPaper.close")}</Button>
                 </div>
               </div>
             </div>

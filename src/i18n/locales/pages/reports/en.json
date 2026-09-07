@@ -1,0 +1,71 @@
+{
+  "header": {
+    "title": "Reports & Analytics",
+    "description": "CO/PO attainment analytics with downloadable reports",
+    "coCsv": "CO CSV",
+    "poCsv": "PO CSV",
+    "studentsCsv": "Students CSV"
+  },
+  "summary": {
+    "courseOutcomes": "Course Outcomes",
+    "programOutcomes": "Program Outcomes",
+    "attained": "COs Attained (≥70)",
+    "atRisk": "COs At Risk (<40)"
+  },
+  "coChart": {
+    "title": "CO Attainment",
+    "description": "Average score (0-100) across all students per Course Outcome",
+    "loading": "Loading...",
+    "empty": "No CO data yet. Grade submissions to see attainment."
+  },
+  "poRadar": {
+    "title": "PO Attainment Radar",
+    "description": "Weighted average (using CO-PO correlations)",
+    "loading": "Loading...",
+    "empty": "No PO data yet."
+  },
+  "coDistribution": {
+    "title": "CO Distribution",
+    "description": "How many COs are High / Moderate / Low",
+    "empty": "No data yet.",
+    "high": "High (≥70)",
+    "moderate": "Moderate (40-70)",
+    "low": "Low (<40)"
+  },
+  "coTable": {
+    "title": "CO Attainment Details",
+    "code": "CO Code",
+    "description": "Description",
+    "avgScore": "Avg Score",
+    "los": "LOs",
+    "level": "Level"
+  },
+  "poTable": {
+    "title": "PO Attainment Details",
+    "code": "PO Code",
+    "description": "Description",
+    "weightedScore": "Weighted Score",
+    "cos": "COs",
+    "level": "Level"
+  },
+  "attainment": {
+    "high": "High",
+    "moderate": "Moderate",
+    "low": "Low"
+  },
+  "notTeacher": "Reports are available to teachers only.",
+  "toasts": {
+    "downloaded": "Downloaded {{name}}",
+    "downloadFailed": "Download failed"
+  },
+  "demo": {
+    "co1": "Understand fundamentals and core principles.",
+    "co2": "Analyze complex problems using learned algorithms.",
+    "co3": "Evaluate constraints and design tradeoffs.",
+    "co4": "Design efficient system architectures.",
+    "po1": "Engineering Knowledge",
+    "po2": "Problem Analysis",
+    "po3": "Design/Development of Solutions",
+    "po4": "Modern Tool Usage"
+  }
+}

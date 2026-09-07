@@ -1,0 +1,131 @@
+{
+  "header": {
+    "title": "Welcome back, {{name}}",
+    "description": "Manage your classrooms, assignments, and announcements in one place",
+    "createClass": "Create Class"
+  },
+  "stats": {
+    "totalClasses": "Total Classes",
+    "activeClassrooms": "Active classrooms",
+    "studentsEnrolled": "Students Enrolled",
+    "acrossAllClasses": "Across all classes",
+    "activeAssignments": "Active Assignments",
+    "drafts": "{{count}} drafts",
+    "pendingRequests": "Pending Requests",
+    "awaitingApproval": "Awaiting your approval"
+  },
+  "classes": {
+    "sectionTitle": "Your Classes",
+    "sectionDescription": "Click on a class to view announcements, assignments, and materials",
+    "emptyTitle": "No classes yet",
+    "emptyDescription": "Create your first class to start managing assignments and connecting with students.",
+    "emptyAction": "Create Your First Class",
+    "noSubject": "No subject set",
+    "pending": "{{count}} pending"
+  },
+  "classActions": {
+    "copyCode": "Copy Code",
+    "editDetails": "Edit Details",
+    "delete": "Delete"
+  },
+  "tabs": {
+    "announcements": "Announcements",
+    "assignments": "Assignments",
+    "requests": "Requests",
+    "materials": "Materials"
+  },
+  "banner": {
+    "students": "students",
+    "code": "Code"
+  },
+  "announcements": {
+    "titlePlaceholder": "Announcement title (optional)",
+    "writeMessage": "Write a message for {{name}}...",
+    "cancel": "Cancel",
+    "sendToClass": "Send to Class",
+    "lastSent": "Last sent",
+    "history": "History",
+    "emptyForClass": "No announcements yet for this classroom.",
+    "trigger": "Announce something to {{name}}...",
+    "latest": "Latest",
+    "globalStream": "Global Stream",
+    "announceToAll": "Announce to All",
+    "globalPlaceholderTitle": "Announcement Title (optional)",
+    "globalPlaceholder": "Announce something to all your classes...",
+    "sendToAll": "Send to All Classes",
+    "globalTrigger": "Announce something to your classes...",
+    "emptyGlobal": "The global stream is quiet. Create an assignment or send an announcement."
+  },
+  "toasts": {
+    "announcementSent": "Announcement sent!",
+    "failedToSend": "Failed to send",
+    "classCreated": "Class '{{name}}' created! Code: {{code}}",
+    "failedToCreateClass": "Failed to create class",
+    "classUpdated": "Class updated!",
+    "classDeleteFailed": "Delete class {{name}}?",
+    "materialUploaded": "Material uploaded!",
+    "uploadFailed": "Upload failed",
+    "graded": "Graded!",
+    "assignmentDeleted": "Assignment deleted",
+    "error": "Error",
+    "codeCopied": "Code copied!",
+    "deleteConfirm": "Delete this assignment?"
+  },
+  "assignments": {
+    "noAssignmentsInClass": "No assignments sent to this classroom yet.",
+    "createInstructions": "Use Assignment Creator and select this classroom when publishing.",
+    "publishedHeader": "Published · Visible to Students",
+    "draftsHeader": "Drafts · Not sent yet",
+    "noDrafts": "No pending join requests.",
+    "requestedToJoin": "Requested to join",
+    "newAssignment": "You posted a new assignment: {{title}}",
+    "due": "Due",
+    "marks": "marks",
+    "posted": "Posted",
+    "draft": "Draft",
+    "sentToStudents": "Sent to Students"
+  },
+  "materials": {
+    "sectionTitle": "Chapter PDFs / Materials",
+    "upload": "Upload PDF",
+    "empty": "No materials uploaded yet",
+    "extractedText": "Extracted text representation."
+  },
+  "grading": {
+    "title": "Student Submissions",
+    "close": "Close",
+    "empty": "No submissions yet for this assignment.",
+    "emptyDesc": "Submissions will appear here once students upload their PDFs.",
+    "submitted": "Submitted",
+    "viewPdf": "View Submitted PDF",
+    "marks": "marks",
+    "ocrTitle": "OCR Extracted Text",
+    "marksPlaceholder": "Marks",
+    "gradePlaceholder": "Grade (A+)",
+    "feedbackPlaceholder": "Feedback for student"
+  },
+  "createClass": {
+    "title": "Create class",
+    "nameLabel": "Class name (required)",
+    "namePlaceholder": "e.g. Science 101",
+    "sectionLabel": "Section",
+    "sectionPlaceholder": "e.g. Morning Batch",
+    "subjectLabel": "Subject",
+    "subjectPlaceholder": "e.g. Physics",
+    "cancel": "Cancel",
+    "create": "Create",
+    "tryAgain": "Please try again."
+  },
+  "editClass": {
+    "title": "Edit class details",
+    "nameLabel": "Class name (required)",
+    "sectionLabel": "Section",
+    "subjectLabel": "Subject",
+    "cancel": "Cancel",
+    "save": "Save"
+  },
+  "defaults": {
+    "teacher": "Teacher",
+    "user": "user"
+  }
+}

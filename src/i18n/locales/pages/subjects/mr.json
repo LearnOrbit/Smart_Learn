@@ -1,0 +1,51 @@
+{
+  "header": {
+    "title": "विषय",
+    "description": "अभ्यासक्रम विषय आणि त्यांचे CO दुवे व्यवस्थापित करा"
+  },
+  "buttons": {
+    "newSubject": "नवीन विषय",
+    "createSubject": "विषय तयार करा",
+    "creating": "तयार होत आहे..."
+  },
+  "form": {
+    "createTitle": "विषय तयार करा",
+    "code": "कोड",
+    "codePlaceholder": "उदा. CS101",
+    "name": "नाव",
+    "namePlaceholder": "उदा. डेटा स्ट्रक्चर्स",
+    "description": "वर्णन",
+    "descriptionPlaceholder": "वर्णन..."
+  },
+  "tabs": {
+    "subjects": "विषय",
+    "coLinkage": "CO दुवा"
+  },
+  "list": {
+    "loading": "लोड होत आहे...",
+    "emptyTitle": "अद्याप कोणतेही विषय नाहीत. तुमचा पहिला विषय तयार करा!",
+    "noDescription": "वर्णन नाही"
+  },
+  "coLink": {
+    "selectSubject": "एक विषय निवडा",
+    "emptySubjects": "अद्याप कोणतेही विषय नाहीत.",
+    "emptyCoListTitle": "Course Outcomes जोडण्यासाठी एक विषय निवडा",
+    "emptyCoListDesc": "COs व्यवस्थापित करण्यासाठी डावीकडून एक विषय निवडा.",
+    "noCos": "COs परिभाषित नाहीत. आधी Outcomes Manager वर जा.",
+    "cardTitle": "{{code}} साठी COs",
+    "cardDescription": "या विषयाशी COs जोडणे/काढणे टॉगल करा. जोडलेले COs Question Paper Generator मध्ये दिसतील.",
+    "linked": "जोडलेले",
+    "notLinked": "जोडलेले नाही",
+    "summary_one": "{{code}} शी {{count}} CO जोडलेले आहे. हे Question Paper Generator मध्ये पर्याय म्हणून दिसतील.",
+    "summary_other": "{{code}} शी {{count}} COs जोडलेले आहेत. हे Question Paper Generator मध्ये पर्याय म्हणून दिसतील."
+  },
+  "toasts": {
+    "created": "विषय तयार झाला!",
+    "deleted": "विषय हटवला",
+    "errorTitle": "त्रुटी",
+    "coLinked": "CO विषयाशी जोडले!",
+    "linkFailed": "दुवा अयशस्वी",
+    "coUnlinked": "CO काढले",
+    "unlinkFailed": "काढणे अयशस्वी"
+  }
+}

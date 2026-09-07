@@ -1,0 +1,56 @@
+{
+  "header": {
+    "title": "Evaluation Review",
+    "description": "Run AI evaluation on submissions and review scores"
+  },
+  "selects": {
+    "assignmentLabel": "Assignment",
+    "assignmentPlaceholder": "Select assignment...",
+    "noAssignments": "No assignments found",
+    "submissionLabel": "Submission",
+    "submissionPlaceholder": "Select submission...",
+    "loading": "Loading...",
+    "noSubmissions": "No submissions yet",
+    "ungraded": "ungraded",
+    "studentFallback": "Student"
+  },
+  "modelSolutions": {
+    "title": "Model Solutions",
+    "description": "Upload a PDF or view existing model solutions for this assignment",
+    "uploading": "Uploading...",
+    "uploadPdf": "Upload PDF Solution",
+    "solutionsCount": "{{count}} solution(s)",
+    "solutionNumber": "Solution {{n}}:",
+    "fileBased": "(file-based)"
+  },
+  "studentAnswer": {
+    "title": "Student Answer",
+    "noContent": "No text content",
+    "currentMarks": "Current marks: {{marks}}",
+    "currentMarksEmpty": "Current marks: —",
+    "evaluating": "Evaluating...",
+    "runEvaluation": "Run AI Evaluation",
+    "similarity": "Similarity: {{pct}}%"
+  },
+  "evaluations": {
+    "title": "Per-Question Scores",
+    "loading": "Loading...",
+    "empty": "No evaluations yet. Click \"Run AI Evaluation\" to start.",
+    "overridden": "Overridden",
+    "questionLabel": "Q{{n}}",
+    "overrideLabel": "Override",
+    "scorePlaceholder": "Score",
+    "feedbackLabel": "Feedback",
+    "feedbackPlaceholder": "Optional feedback",
+    "save": "Save"
+  },
+  "toasts": {
+    "solutionUploaded": "Model solution uploaded!",
+    "solutionUploadFailed": "Upload failed",
+    "evaluationComplete": "Evaluation complete",
+    "evaluationCompleteDesc": "Total score: {{score}}/{{max}}",
+    "evaluationFailed": "Evaluation failed",
+    "overrideSaved": "Override saved!",
+    "overrideFailed": "Override failed"
+  }
+}

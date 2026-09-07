@@ -1,0 +1,51 @@
+{
+  "header": {
+    "title": "विषय",
+    "description": "पाठ्यक्रम विषयों और उनके CO लिंक को प्रबंधित करें"
+  },
+  "buttons": {
+    "newSubject": "नया विषय",
+    "createSubject": "विषय बनाएँ",
+    "creating": "बनाया जा रहा है..."
+  },
+  "form": {
+    "createTitle": "विषय बनाएँ",
+    "code": "कोड",
+    "codePlaceholder": "जैसे CS101",
+    "name": "नाम",
+    "namePlaceholder": "जैसे डेटा स्ट्रक्चर",
+    "description": "विवरण",
+    "descriptionPlaceholder": "विवरण..."
+  },
+  "tabs": {
+    "subjects": "विषय",
+    "coLinkage": "CO लिंक"
+  },
+  "list": {
+    "loading": "लोड हो रहा है...",
+    "emptyTitle": "अभी तक कोई विषय नहीं। अपना पहला विषय बनाएँ!",
+    "noDescription": "कोई विवरण नहीं"
+  },
+  "coLink": {
+    "selectSubject": "एक विषय चुनें",
+    "emptySubjects": "अभी तक कोई विषय नहीं।",
+    "emptyCoListTitle": "Course Outcomes जोड़ने के लिए एक विषय चुनें",
+    "emptyCoListDesc": "COs प्रबंधित करने के लिए बाईं ओर से कोई विषय चुनें।",
+    "noCos": "कोई CO परिभाषित नहीं है। पहले Outcomes Manager पर जाएँ।",
+    "cardTitle": "{{code}} के लिए COs",
+    "cardDescription": "COs को इस विषय से जोड़ने/हटाने के लिए टॉगल करें। जुड़े हुए COs Question Paper Generator में दिखेंगे।",
+    "linked": "जुड़ा हुआ",
+    "notLinked": "नहीं जुड़ा",
+    "summary_one": "{{code}} से {{count}} CO जुड़ा है। ये Question Paper Generator में विकल्पों के रूप में दिखेंगे।",
+    "summary_other": "{{code}} से {{count}} COs जुड़े हैं। ये Question Paper Generator में विकल्पों के रूप में दिखेंगे।"
+  },
+  "toasts": {
+    "created": "विषय बनाया गया!",
+    "deleted": "विषय हटाया गया",
+    "errorTitle": "त्रुटि",
+    "coLinked": "CO विषय से जुड़ा!",
+    "linkFailed": "लिंक विफल",
+    "coUnlinked": "CO हटाया गया",
+    "unlinkFailed": "हटाना विफल"
+  }
+}

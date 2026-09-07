@@ -1,0 +1,62 @@
+{
+  "app": {
+    "name": "AcademiQ",
+    "teacherPortal": "Teacher Portal",
+    "studentPortal": "Student Portal"
+  },
+  "nav": {
+    "main": "Main",
+    "analytics": "Analytics & Mapping",
+    "tools": "Tools",
+    "navigation": "Navigation",
+    "aiTools": "AI Tools",
+    "assignments": "Assignments",
+    "scores": "Scores",
+    "createAssignment": "Create Assignment",
+    "evaluation": "Evaluation",
+    "outcomes": "Outcomes",
+    "reports": "Reports",
+    "analytics": "Analytics",
+    "lesAnalytics": "LES Analytics",
+    "subjects": "Subjects",
+    "questionPaper": "Question Paper",
+    "quickAiQuiz": "Quick AI Quiz",
+    "aiGenerator": "AI Generator",
+    "feedback": "Feedback",
+    "announcements": "Announcements",
+    "home": "Home",
+    "calendar": "Calendar",
+    "enrolled": "Enrolled",
+    "archived": "Archived Classes",
+    "settings": "Settings",
+    "aiQuiz": "AI Quiz"
+  },
+  "topbar": {
+    "changeLanguage": "Change language",
+    "language": "Language",
+    "notifications": "Notifications",
+    "signOut": "Sign out",
+    "closeMenu": "Close menu",
+    "openMenu": "Open menu"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "search": "Search",
+    "loading": "Loading…",
+    "back": "Back",
+    "next": "Next",
+    "submit": "Submit",
+    "create": "Create",
+    "update": "Update",
+    "close": "Close"
+  },
+  "settings": {
+    "language": "Language",
+    "languageHelp": "Used for the top-bar switcher and (soon) for AI-generated content.",
+    "languageAndRegion": "Language & region",
+    "languageRegionDesc": "Set your preferred language."
+  }
+}

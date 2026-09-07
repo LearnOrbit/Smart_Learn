@@ -1,0 +1,78 @@
+{
+  "title": "सेटिंग्ज",
+  "description": "आपले खाते, प्राधान्ये आणि सूचना व्यवस्थापित करा.",
+  "reset": "रीसेट करा",
+  "saveChanges": "बदल जतन करा",
+  "tabs": {
+    "profile": "प्रोफाइल",
+    "notifications": "सूचना",
+    "appearance": "दृश्य",
+    "security": "सुरक्षा"
+  },
+  "profile": {
+    "infoTitle": "प्रोफाइल माहिती",
+    "infoDescription": "आपले वैयक्तिक तपशील अपडेट करा. प्लॅटफॉर्मवर इतर लोक आपल्याला असे पाहतील.",
+    "yourName": "आपले नाव",
+    "active": "सक्रिय",
+    "fullName": "पूर्ण नाव",
+    "fullNamePlaceholder": "आपले पूर्ण नाव प्रविष्ट करा",
+    "email": "ईमेल",
+    "emailPlaceholder": "tumhi@example.com",
+    "emailHelp": "ईमेल आपल्या खाते प्रदात्याद्वारे व्यवस्थापित केले जाते.",
+    "bio": "परिचय",
+    "bioPlaceholder": "आपल्याबद्दल काही सांगा…",
+    "privacyTitle": "गोपनीयता",
+    "privacyDescription": "आपली प्रोफाइल आणि क्रियाकलाप कोण पाहू शकतो हे नियंत्रित करा.",
+    "profileVisibility": "प्रोफाइल दृश्यमानता",
+    "visibilityPublic": "प्लॅटफॉर्मवर कोणीही",
+    "visibilityClassmates": "फक्त आपले सहकारी",
+    "visibilityPrivate": "फक्त आपण"
+  },
+  "notifications": {
+    "emailTitle": "ईमेल सूचना",
+    "emailDescription": "आम्ही आपल्याला कशाबद्दल ईमेल करावे ते निवडा.",
+    "emailItem": "ईमेल सूचना",
+    "emailItemDesc": "ईमेलद्वारे अद्यतने मिळवा",
+    "assignmentReminders": "असाइनमेंट स्मरणपत्रे",
+    "assignmentRemindersDesc": "मुदत संपण्यापूर्वी स्मरणपत्रे मिळवा",
+    "announcementAlerts": "घोषणा सूचना",
+    "announcementAlertsDesc": "शिक्षकांनी घोषणा पोस्ट केल्यावर",
+    "weeklyDigest": "साप्ताहिक सारांश",
+    "weeklyDigestDesc": "प्रत्येक सोमवारी आपल्या आठवड्याचा सारांश",
+    "pushTitle": "पुश सूचना",
+    "pushDescription": "आपल्या ब्राउझरमध्ये रिअल-टाइम सूचना.",
+    "browserPush": "ब्राउझर पुश सूचना",
+    "browserPushDesc": "Smart Learn फोकसमध्ये नसतानाही सूचना दाखवा"
+  },
+  "appearance": {
+    "themeTitle": "थीम",
+    "themeDescription": "आपल्याला योग्य वाटेल असे दृश्य निवडा.",
+    "themeMode": "थीम मोड",
+    "themeModeDesc": "लाइट, डार्क दरम्यान स्विच करा किंवा सिस्टमचे अनुसरण करा."
+  },
+  "security": {
+    "passwordTitle": "पासवर्ड",
+    "passwordDescription": "आपले खाते सुरक्षित ठेवण्यासाठी नियमितपणे पासवर्ड बदला.",
+    "currentPassword": "सध्याचा पासवर्ड",
+    "newPassword": "नवीन पासवर्ड",
+    "newPasswordPlaceholder": "किमान 8 वर्ण",
+    "confirmNewPassword": "नवीन पासवर्ड पुन्हा प्रविष्ट करा",
+    "confirmNewPasswordPlaceholder": "नवीन पासवर्ड पुन्हा टाका",
+    "updatePassword": "पासवर्ड अपडेट करा",
+    "sessionTitle": "सत्र",
+    "sessionDescription": "आपले सक्रिय सत्र व्यवस्थापित करा.",
+    "signOut": "साइन आउट",
+    "dangerTitle": "धोक्याचे क्षेत्र",
+    "dangerDescription": "अपरिवर्तनीय क्रिया. कृपया खात्री असू द्या.",
+    "deleteAccount": "खाते हटवा"
+  },
+  "toasts": {
+    "saved": "सेटिंग्ज जतन झाल्या",
+    "savedDescription": "आपले बदल लागू केले गेले आहेत.",
+    "reset": "सेटिंग्ज डीफॉल्टवर रीसेट झाल्या",
+    "signedOut": "साइन आउट झाले",
+    "deleteConfirm": "खाते हटवायचे? ही क्रिया पूर्ववत करता येत नाही.",
+    "deleteRequested": "खाते हटवण्याची विनंती केली",
+    "deleteRequestedDescription": "खाते हटवणे पूर्ण करण्यासाठी कृपया सपोर्टशी संपर्क साधा."
+  }
+}

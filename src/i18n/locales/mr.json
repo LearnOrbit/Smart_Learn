@@ -1,0 +1,62 @@
+{
+  "app": {
+    "name": "AcademiQ",
+    "teacherPortal": "शिक्षक पोर्टल",
+    "studentPortal": "विद्यार्थी पोर्टल"
+  },
+  "nav": {
+    "main": "मुख्य",
+    "analytics": "विश्लेषण आणि मॅपिंग",
+    "tools": "साधने",
+    "navigation": "नेव्हिगेशन",
+    "aiTools": "AI साधने",
+    "assignments": "असाइनमेंट",
+    "scores": "गुण",
+    "createAssignment": "असाइनमेंट तयार करा",
+    "evaluation": "मूल्यमापन",
+    "outcomes": "निष्कर्ष",
+    "reports": "अहवाल",
+    "analytics": "विश्लेषण",
+    "lesAnalytics": "LES विश्लेषण",
+    "subjects": "विषय",
+    "questionPaper": "प्रश्नपत्रिका",
+    "quickAiQuiz": "जलद AI क्विझ",
+    "aiGenerator": "AI जनरेटर",
+    "feedback": "अभिप्राय",
+    "announcements": "घोषणा",
+    "home": "मुख्यपृष्ठ",
+    "calendar": "कॅलेंडर",
+    "enrolled": "नोंदणीकृत",
+    "archived": "संग्रहित वर्ग",
+    "settings": "सेटिंग्ज",
+    "aiQuiz": "AI क्विझ"
+  },
+  "topbar": {
+    "changeLanguage": "भाषा बदला",
+    "language": "भाषा",
+    "notifications": "सूचना",
+    "signOut": "साइन आउट",
+    "closeMenu": "मेनू बंद करा",
+    "openMenu": "मेनू उघडा"
+  },
+  "common": {
+    "save": "जतन करा",
+    "cancel": "रद्द करा",
+    "delete": "हटवा",
+    "edit": "संपादित करा",
+    "search": "शोध",
+    "loading": "लोड होत आहे…",
+    "back": "मागे",
+    "next": "पुढे",
+    "submit": "सबमिट करा",
+    "create": "तयार करा",
+    "update": "अपडेट करा",
+    "close": "बंद करा"
+  },
+  "settings": {
+    "language": "भाषा",
+    "languageHelp": "टॉप-बार स्विचर आणि (लवकरच) AI-व्युत्पन्न सामग्रीसाठी वापरले जाते.",
+    "languageAndRegion": "भाषा आणि प्रदेश",
+    "languageRegionDesc": "आपली पसंतीची भाषा निवडा."
+  }
+}

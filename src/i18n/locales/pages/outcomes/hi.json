@@ -1,0 +1,65 @@
+{
+  "title": "परिणाम प्रबंधक",
+  "description": "कार्यक्रम परिणाम, पाठ्यक्रम परिणाम और अधिगम परिणाम प्रबंधित करें",
+  "toasts": {
+    "poCreated": "PO बनाया गया!",
+    "coCreated": "CO बनाया गया!",
+    "loCreated": "LO बनाया गया!",
+    "error": "त्रुटि",
+    "pdfLoaded": "PDF लोड हो गया!",
+    "pdfLoadedDesc": "अब CO और LO निकालने के लिए विषय का नाम दर्ज करें।",
+    "uploadFailed": "अपलोड विफल",
+    "enterSubjectFirst": "पहले विषय का नाम दर्ज करें",
+    "uploadPdfFirst": "पहले PDF अपलोड करें",
+    "subjectNotFound": "विषय नहीं मिला",
+    "subjectNotFoundDesc": "\"{{name}}\" PDF में नहीं मिला. छोटा नाम आज़माएं।",
+    "nothingToSave": "सहेजने के लिए कुछ नहीं",
+    "saveFailed": "सहेजना विफल",
+    "extractionFailed": "निष्कर्षण विफल",
+    "posSaved": "PO सहेजे गए!",
+    "posSavedDesc": "{{count}} कार्यक्रम परिणाम स्थायी रूप से सहेजे गए।"
+  },
+  "po": {
+    "tabTitle": "कार्यक्रम परिणाम",
+    "addPo": "PO जोड़ें",
+    "newPo": "नया कार्यक्रम परिणाम",
+    "code": "कोड",
+    "codePlaceholder": "PO1",
+    "description": "विवरण",
+    "create": "बनाएं"
+  },
+  "co": {
+    "addCo": "CO जोड़ें",
+    "newCo": "नया पाठ्यक्रम परिणाम",
+    "code": "कोड",
+    "codePlaceholder": "CO1",
+    "selectPo": "PO चुनें",
+    "none": "कोई नहीं",
+    "description": "विवरण",
+    "create": "CO बनाएं"
+  },
+  "lo": {
+    "addLo": "LO जोड़ें",
+    "newLo": "नया अधिगम परिणाम",
+    "code": "कोड",
+    "codePlaceholder": "LO1",
+    "linkedCo": "लिंक किया गया CO",
+    "selectCo": "CO चुनें",
+    "description": "विवरण",
+    "create": "LO बनाएं"
+  },
+  "pdf": {
+    "clickToUpload": "PDF अपलोड करने के लिए क्लिक करें",
+    "anySyllabus": "कोई सिलेबस या पाठ्यक्रम दस्तावेज़",
+    "uploadPoDocument": "PO दस्तावेज़ अपलोड करने के लिए क्लिक करें",
+    "extract": "निकालें",
+    "subjectPlaceholder": "विषय का नाम दर्ज करें (उदा., डेटा स्ट्रक्चर)",
+    "savedOutcomes": "सहेजे गए परिणाम",
+    "noSaved": "अभी तक कोई परिणाम सहेजा नहीं गया"
+  },
+  "ui": {
+    "uploadHint": "ऊपर एक PDF अपलोड करें और एक विषय निकालें।",
+    "importPoTitle": "PDF से PO आयात करें",
+    "importPoHint": "\"PO1: विवरण\" प्रारूप से मेल खाने वाली पंक्तियाँ निकालता है।"
+  }
+}

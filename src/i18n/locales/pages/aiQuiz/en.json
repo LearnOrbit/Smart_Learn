@@ -1,0 +1,46 @@
+{
+  "header": {
+    "title": "AI Quiz",
+    "description": "Generate a quick multiple-choice quiz on any topic with AI. Nothing is saved — it's just for you."
+  },
+  "configure": {
+    "topicLabel": "What do you want to be quizzed on?",
+    "topicPlaceholder": "e.g. Photosynthesis, the French Revolution, Newton's Laws…",
+    "topicHint": "Press Enter or click Generate.",
+    "difficultyLabel": "Difficulty",
+    "difficultyEasy": "Easy",
+    "difficultyMedium": "Medium",
+    "difficultyHard": "Hard",
+    "countLabel": "Number of questions",
+    "generate": "Generate Quiz",
+    "generating": "Generating…",
+    "loading": "Cooking up your questions…"
+  },
+  "play": {
+    "answeredOf": "{{answered}} of {{total}} answered",
+    "correctCount": "{{count}} correct",
+    "questionsBadge": "{{count}} questions",
+    "answerAllFirst": "Answer all {{count}} questions first",
+    "submit": "Submit answers"
+  },
+  "card": {
+    "correct": "Correct",
+    "incorrect": "Incorrect"
+  },
+  "explanation": "Explanation",
+  "score": {
+    "title": "Your score",
+    "breakdown": "{{correct}} of {{total}} correct · {{topic}}",
+    "retake": "Retake same quiz",
+    "newTopic": "New topic"
+  },
+  "tip": {
+    "title": "How this works",
+    "body": "Pick a topic — anything you're studying — and the AI will write you a few multiple-choice questions with explanations. There are no time limits, no scores sent anywhere, and nothing saved. Just a low-pressure way to test yourself before an exam."
+  },
+  "toasts": {
+    "noQuestions": "No questions were generated",
+    "generateFailed": "Couldn't generate the quiz",
+    "tryDifferent": "Please try a different topic."
+  }
+}

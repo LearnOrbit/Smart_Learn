@@ -1,0 +1,65 @@
+{
+  "title": "परिणाम व्यवस्थापक",
+  "description": "कार्यक्रम परिणाम, अभ्यासक्रम परिणाम आणि अध्ययन परिणाम व्यवस्थापित करा",
+  "toasts": {
+    "poCreated": "PO तयार केले!",
+    "coCreated": "CO तयार केले!",
+    "loCreated": "LO तयार केले!",
+    "error": "त्रुटी",
+    "pdfLoaded": "PDF लोड झाले!",
+    "pdfLoadedDesc": "आता CO आणि LO काढण्यासाठी विषयाचे नाव प्रविष्ट करा.",
+    "uploadFailed": "अपलोड अयशस्वी",
+    "enterSubjectFirst": "प्रथम विषयाचे नाव प्रविष्ट करा",
+    "uploadPdfFirst": "प्रथम PDF अपलोड करा",
+    "subjectNotFound": "विषय सापडला नाही",
+    "subjectNotFoundDesc": "\"{{name}}\" PDF मध्ये सापडले नाही. लहान नाव वापरून पहा.",
+    "nothingToSave": "जतन करण्यासाठी काहीही नाही",
+    "saveFailed": "जतन अयशस्वी",
+    "extractionFailed": "काढणे अयशस्वी",
+    "posSaved": "PO जतन केले!",
+    "posSavedDesc": "{{count}} कार्यक्रम परिणाम कायमस्वरूपी जतन केले."
+  },
+  "po": {
+    "tabTitle": "कार्यक्रम परिणाम",
+    "addPo": "PO जोडा",
+    "newPo": "नवीन कार्यक्रम परिणाम",
+    "code": "कोड",
+    "codePlaceholder": "PO1",
+    "description": "वर्णन",
+    "create": "तयार करा"
+  },
+  "co": {
+    "addCo": "CO जोडा",
+    "newCo": "नवीन अभ्यासक्रम परिणाम",
+    "code": "कोड",
+    "codePlaceholder": "CO1",
+    "selectPo": "PO निवडा",
+    "none": "काहीही नाही",
+    "description": "वर्णन",
+    "create": "CO तयार करा"
+  },
+  "lo": {
+    "addLo": "LO जोडा",
+    "newLo": "नवीन अध्ययन परिणाम",
+    "code": "कोड",
+    "codePlaceholder": "LO1",
+    "linkedCo": "लिंक केलेले CO",
+    "selectCo": "CO निवडा",
+    "description": "वर्णन",
+    "create": "LO तयार करा"
+  },
+  "pdf": {
+    "clickToUpload": "PDF अपलोड करण्यासाठी क्लिक करा",
+    "anySyllabus": "कोणतेही अभ्यासक्रम किंवा कोर्स दस्तऐवज",
+    "uploadPoDocument": "PO दस्तऐवज अपलोड करण्यासाठी क्लिक करा",
+    "extract": "काढा",
+    "subjectPlaceholder": "विषयाचे नाव प्रविष्ट करा (उदा., डेटा स्ट्रक्चर्स)",
+    "savedOutcomes": "जतन केलेले परिणाम",
+    "noSaved": "अद्याप कोणतेही परिणाम जतन केलेले नाहीत"
+  },
+  "ui": {
+    "uploadHint": "वर एक PDF अपलोड करा आणि एक विषय काढा.",
+    "importPoTitle": "PDF मधून PO आयात करा",
+    "importPoHint": "\"PO1: वर्णन\" स्वरूपाशी जुळणाऱ्या ओळी काढतो."
+  }
+}

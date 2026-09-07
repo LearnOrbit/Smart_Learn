@@ -1,0 +1,52 @@
+{
+  "header": {
+    "title": "Notebook Analysis",
+    "description": "Grounded explicitly in your loaded syllabus materials.",
+    "mobileDescription": "Grounded in your loaded syllabus materials"
+  },
+  "sources": {
+    "title": "Current Sources",
+    "uploadedDocument": "Uploaded Document",
+    "noSources": "No explicit sources loaded.",
+    "noSourcesHint": "Answering from general knowledge."
+  },
+  "audio": {
+    "title": "Deep Dive Audio Overview",
+    "play": "Play AI Podcast",
+    "generate": "Generate Audio Overview",
+    "synthesizing": "Synthesizing Voices...",
+    "hostsSubtitle": "Two AI hosts discuss your material",
+    "hostsDiscussing": "Hosts discussing {{name}}",
+    "hostsDiscussingGeneric": "Hosts discussing your topics"
+  },
+  "chat": {
+    "title": "AcademiQ Notebook Analyst",
+    "statusWithSource": "Reading {{name}}",
+    "statusGeneral": "General knowledge mode",
+    "sourceLoaded": "Source loaded",
+    "initialWithDoc": "Hi! I'm your AcademiQ Assistant. I've ingested your document **{{name}}**. You can ask me questions about it, or ask me to synthesize a study guide!",
+    "initialGeneric": "Hi! I'm your AcademiQ Assistant. You haven't loaded a specific document, but I'm ready to help answer any academic questions, provide study strategies, or explain complex concepts.",
+    "disclaimer": "AcademiQ Notebook Analyst can make mistakes. Check important info against original sources."
+  },
+  "prompts": {
+    "title": "Try one of these",
+    "summary": "Summary",
+    "studyGuide": "Study Guide",
+    "faq": "FAQ",
+    "quizQuestions": "Quiz questions",
+    "aiPromptSummary": "Generate a Summary based on this document.",
+    "aiPromptStudyGuide": "Generate a Study Guide based on this document.",
+    "aiPromptFaq": "Generate an FAQ based on this document.",
+    "aiPromptQuiz": "Generate Quiz questions based on this document."
+  },
+  "input": {
+    "withSource": "Ask questions about your sources...",
+    "generic": "Ask a question..."
+  },
+  "toasts": {
+    "errorTitle": "Error",
+    "errorFallback": "Failed to get response",
+    "audioReady": "Audio Overview Ready",
+    "audioReadyDesc": "Your deep dive discussion has been synthesized."
+  }
+}

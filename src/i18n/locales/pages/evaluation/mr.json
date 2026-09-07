@@ -1,0 +1,57 @@
+{
+  "header": {
+    "title": "मूल्यांकन पुनरावलोकन",
+    "description": "सबमिशनवर AI मूल्यांकन चालवा आणि गुणांचे पुनरावलोकन करा"
+  },
+  "selects": {
+    "assignmentLabel": "असाइनमेंट",
+    "assignmentPlaceholder": "असाइनमेंट निवडा...",
+    "noAssignments": "कोणतेही असाइनमेंट सापडले नाहीत",
+    "submissionLabel": "सबमिशन",
+    "submissionPlaceholder": "सबमिशन निवडा...",
+    "loading": "लोड होत आहे...",
+    "noSubmissions": "अद्याप कोणतेही सबमिशन नाही",
+    "ungraded": "अनग्रेडेड",
+    "studentFallback": "विद्यार्थी"
+  },
+  "modelSolutions": {
+    "title": "मॉडेल सॉल्यूशन्स",
+    "description": "PDF अपलोड करा किंवा या असाइनमेंटसाठी विद्यमान मॉडेल सॉल्यूशन्स पहा",
+    "uploading": "अपलोड होत आहे...",
+    "uploadPdf": "PDF सॉल्यूशन अपलोड करा",
+    "solutionsCount_one": "{{count}} सॉल्यूशन",
+    "solutionsCount_other": "{{count}} सॉल्यूशन्स",
+    "solutionNumber": "सॉल्यूशन {{n}}:",
+    "fileBased": "(फाइल-आधारित)"
+  },
+  "studentAnswer": {
+    "title": "विद्यार्थ्याचे उत्तर",
+    "noContent": "कोणताही मजकूर नाही",
+    "currentMarks": "सध्याचे गुण: {{marks}}",
+    "currentMarksEmpty": "सध्याचे गुण: —",
+    "evaluating": "मूल्यांकन होत आहे...",
+    "runEvaluation": "AI मूल्यांकन चालवा",
+    "similarity": "समानता: {{pct}}%"
+  },
+  "evaluations": {
+    "title": "प्रति-प्रश्न गुण",
+    "loading": "लोड होत आहे...",
+    "empty": "अद्याप कोणतेही मूल्यांकन नाही. सुरू करण्यासाठी \"AI मूल्यांकन चालवा\" वर क्लिक करा.",
+    "overridden": "ओव्हरराइड केले",
+    "questionLabel": "प्रश्न {{n}}",
+    "overrideLabel": "ओव्हरराइड",
+    "scorePlaceholder": "गुण",
+    "feedbackLabel": "अभिप्राय",
+    "feedbackPlaceholder": "पर्यायी अभिप्राय",
+    "save": "जतन करा"
+  },
+  "toasts": {
+    "solutionUploaded": "मॉडेल सॉल्यूशन अपलोड केले!",
+    "solutionUploadFailed": "अपलोड अयशस्वी",
+    "evaluationComplete": "मूल्यांकन पूर्ण",
+    "evaluationCompleteDesc": "एकूण गुण: {{score}}/{{max}}",
+    "evaluationFailed": "मूल्यांकन अयशस्वी",
+    "overrideSaved": "ओव्हरराइड जतन केले!",
+    "overrideFailed": "ओव्हरराइड अयशस्वी"
+  }
+}

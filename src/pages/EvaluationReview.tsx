@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { apiClient } from "@/integrations/api/client";
+import { loadPageNamespace } from "@/i18n";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -50,7 +52,10 @@ interface ModelSolution {
 
 export default function EvaluationReview() {
   const { toast } = useToast();
+  const { t } = useTranslation("pages");
   const queryClient = useQueryClient();
+
+  useEffect(() => { void loadPageNamespace("evaluation"); }, []);
 
   const [selectedAssignmentId, setSelectedAssignmentId] = useState("");
   const [selectedSubmissionId, setSelectedSubmissionId] = useState("");
@@ -109,9 +114,9 @@ export default function EvaluationReview() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["model-solutions", selectedAssignmentId] });
       queryClient.invalidateQueries({ queryKey: ["submissions", selectedAssignmentId] });
-      toast({ title: "Model solution uploaded!" });
+      toast({ title: t("evaluation:toasts.solutionUploaded") });
     },
-    onError: (e: Error) => toast({ title: "Upload failed", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("evaluation:toasts.solutionUploadFailed"), description: e.message, variant: "destructive" }),
   });
 
   // ─── Trigger AI evaluation ───
@@ -124,9 +129,9 @@ export default function EvaluationReview() {
     onSuccess: (data) => {
       refetchEvals();
       queryClient.invalidateQueries({ queryKey: ["submissions", selectedAssignmentId] });
-      toast({ title: "Evaluation complete", description: `Total score: ${data.total_ai_score}/${data.total_max_marks}` });
+      toast({ title: t("evaluation:toasts.evaluationComplete"), description: t("evaluation:toasts.evaluationCompleteDesc", { score: data.total_ai_score, max: data.total_max_marks }) });
     },
-    onError: (e: Error) => toast({ title: "Evaluation failed", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("evaluation:toasts.evaluationFailed"), description: e.message, variant: "destructive" }),
   });
 
   // ─── Teacher override ───
@@ -141,9 +146,9 @@ export default function EvaluationReview() {
     onSuccess: () => {
       refetchEvals();
       queryClient.invalidateQueries({ queryKey: ["submissions", selectedAssignmentId] });
-      toast({ title: "Override saved!" });
+      toast({ title: t("evaluation:toasts.overrideSaved") });
     },
-    onError: (e: Error) => toast({ title: "Override failed", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("evaluation:toasts.overrideFailed"), description: e.message, variant: "destructive" }),
   });
 
   const selectedSubmission = submissions.find((s) => s.id === selectedSubmissionId);
@@ -153,22 +158,22 @@ export default function EvaluationReview() {
       <div className="space-y-6">
         <div>
           <h2 className="text-2xl font-bold" style={{ fontFamily: "var(--font-display)" }}>
-            Evaluation Review
+            {t("evaluation:header.title")}
           </h2>
           <p className="text-muted-foreground">
-            Run AI evaluation on submissions and review scores
+            {t("evaluation:header.description")}
           </p>
         </div>
 
         {/* Selection bar */}
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label>Assignment</Label>
+            <Label>{t("evaluation:selects.assignmentLabel")}</Label>
             <Select value={selectedAssignmentId || undefined} onValueChange={(v) => { setSelectedAssignmentId(v); setSelectedSubmissionId(""); }}>
-              <SelectTrigger><SelectValue placeholder="Select assignment..." /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={t("evaluation:selects.assignmentPlaceholder")} /></SelectTrigger>
               <SelectContent>
                 {assignments.length === 0 ? (
-                  <SelectItem value="none" disabled>No assignments found</SelectItem>
+                  <SelectItem value="none" disabled>{t("evaluation:selects.noAssignments")}</SelectItem>
                 ) : (
                   assignments.map((a) => (
                     <SelectItem key={a.id} value={a.id}>{a.title}</SelectItem>
@@ -178,16 +183,16 @@ export default function EvaluationReview() {
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label>Submission</Label>
+            <Label>{t("evaluation:selects.submissionLabel")}</Label>
             <Select value={selectedSubmissionId || undefined} onValueChange={setSelectedSubmissionId} disabled={!selectedAssignmentId}>
-              <SelectTrigger><SelectValue placeholder={subsLoading ? "Loading..." : "Select submission..."} /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={subsLoading ? t("evaluation:selects.loading") : t("evaluation:selects.submissionPlaceholder")} /></SelectTrigger>
               <SelectContent>
                 {submissions.length === 0 && !subsLoading ? (
-                  <SelectItem value="none" disabled>No submissions yet</SelectItem>
+                  <SelectItem value="none" disabled>{t("evaluation:selects.noSubmissions")}</SelectItem>
                 ) : (
                   submissions.map((s) => (
                     <SelectItem key={s.id} value={s.id}>
-                      {s.student_email || s.student_name || "Student"} — {s.marks ?? "ungraded"}
+                      {s.student_email || s.student_name || t("evaluation:selects.studentFallback")} — {s.marks ?? t("evaluation:selects.ungraded")}
                     </SelectItem>
                   ))
                 )}
@@ -201,9 +206,9 @@ export default function EvaluationReview() {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
-                <FileText className="h-4 w-4" /> Model Solutions
+                <FileText className="h-4 w-4" /> {t("evaluation:modelSolutions.title")}
               </CardTitle>
-              <CardDescription>Upload a PDF or view existing model solutions for this assignment</CardDescription>
+              <CardDescription>{t("evaluation:modelSolutions.description")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex items-center gap-3 flex-wrap">
@@ -220,20 +225,20 @@ export default function EvaluationReview() {
                   <Button variant="outline" asChild disabled={uploadSolutionMutation.isPending}>
                     <span>
                       {uploadSolutionMutation.isPending
-                        ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Uploading...</>
-                        : <><Upload className="h-4 w-4 mr-2" />Upload PDF Solution</>
+                        ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{t("evaluation:modelSolutions.uploading")}</>
+                        : <><Upload className="h-4 w-4 mr-2" />{t("evaluation:modelSolutions.uploadPdf")}</>
                       }
                     </span>
                   </Button>
                 </label>
-                <Badge variant="secondary">{modelSolutions.length} solution(s)</Badge>
+                <Badge variant="secondary">{t("evaluation:modelSolutions.solutionsCount", { count: modelSolutions.length })}</Badge>
               </div>
               {modelSolutions.length > 0 && (
                 <div className="rounded border p-3 max-h-32 overflow-y-auto text-sm text-muted-foreground">
                   {modelSolutions.map((ms, i) => (
                     <div key={ms.id} className="mb-1">
-                      <span className="font-medium text-foreground">Solution {i + 1}:</span>{" "}
-                      {ms.solution_text ? ms.solution_text.slice(0, 200) + (ms.solution_text.length > 200 ? "..." : "") : "(file-based)"}
+                      <span className="font-medium text-foreground">{t("evaluation:modelSolutions.solutionNumber", { n: i + 1 })}</span>{" "}
+                      {ms.solution_text ? ms.solution_text.slice(0, 200) + (ms.solution_text.length > 200 ? "..." : "") : t("evaluation:modelSolutions.fileBased")}
                     </div>
                   ))}
                 </div>
@@ -249,22 +254,26 @@ export default function EvaluationReview() {
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <Eye className="h-4 w-4" /> Student Answer
+                  <Eye className="h-4 w-4" /> {t("evaluation:studentAnswer.title")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="rounded border bg-muted/30 p-4 max-h-72 overflow-y-auto text-sm whitespace-pre-wrap">
-                  {selectedSubmission.content || <span className="text-muted-foreground italic">No text content</span>}
+                  {selectedSubmission.content || <span className="text-muted-foreground italic">{t("evaluation:studentAnswer.noContent")}</span>}
                 </div>
                 <div className="mt-3 flex items-center justify-between">
-                  <Badge variant="outline">Current marks: {selectedSubmission.marks ?? "—"}</Badge>
+                  <Badge variant="outline">
+                    {selectedSubmission.marks !== null && selectedSubmission.marks !== undefined
+                      ? t("evaluation:studentAnswer.currentMarks", { marks: selectedSubmission.marks })
+                      : t("evaluation:studentAnswer.currentMarksEmpty")}
+                  </Badge>
                   <Button
                     onClick={() => evaluateMutation.mutate(selectedSubmissionId)}
                     disabled={evaluateMutation.isPending}
                   >
                     {evaluateMutation.isPending
-                      ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Evaluating...</>
-                      : <><Sparkles className="h-4 w-4 mr-2" />Run AI Evaluation</>
+                      ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{t("evaluation:studentAnswer.evaluating")}</>
+                      : <><Sparkles className="h-4 w-4 mr-2" />{t("evaluation:studentAnswer.runEvaluation")}</>
                     }
                   </Button>
                 </div>
@@ -275,16 +284,16 @@ export default function EvaluationReview() {
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4" /> Per-Question Scores
+                  <BarChart3 className="h-4 w-4" /> {t("evaluation:evaluations.title")}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {evalsLoading ? (
                   <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                    <Loader2 className="h-4 w-4 animate-spin" /> Loading...
+                    <Loader2 className="h-4 w-4 animate-spin" /> {t("evaluation:evaluations.loading")}
                   </div>
                 ) : evaluations.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No evaluations yet. Click "Run AI Evaluation" to start.</p>
+                  <p className="text-sm text-muted-foreground">{t("evaluation:evaluations.empty")}</p>
                 ) : (
                   evaluations.map((ev) => {
                     const pct = ev.max_marks > 0 ? ((ev.final_score ?? ev.ai_score ?? 0) / ev.max_marks) * 100 : 0;
@@ -293,19 +302,19 @@ export default function EvaluationReview() {
                       <div key={ev.id} className="rounded-lg border p-3 space-y-2">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <Badge variant="outline">Q{ev.question_number ?? "?"}</Badge>
+                            <Badge variant="outline">{t("evaluation:evaluations.questionLabel", { n: ev.question_number ?? "?" })}</Badge>
                             <span className="text-sm font-medium">
                               {ev.final_score ?? ev.ai_score ?? 0}/{ev.max_marks}
                             </span>
                             {ev.teacher_override !== null && (
                               <Badge className="bg-amber-500/10 text-amber-600 border-0 text-[10px]">
-                                <PenLine className="h-3 w-3 mr-0.5" /> Overridden
+                                <PenLine className="h-3 w-3 mr-0.5" /> {t("evaluation:evaluations.overridden")}
                               </Badge>
                             )}
                           </div>
                           {ev.similarity_score !== null && (
                             <span className="text-xs text-muted-foreground">
-                              Similarity: {Math.round(ev.similarity_score * 100)}%
+                              {t("evaluation:studentAnswer.similarity", { pct: Math.round(ev.similarity_score * 100) })}
                             </span>
                           )}
                         </div>
@@ -325,12 +334,12 @@ export default function EvaluationReview() {
                         {/* Override controls */}
                         <div className="flex items-end gap-2 pt-1">
                           <div className="space-y-1 w-20">
-                            <Label className="text-[10px]">Override</Label>
+                            <Label className="text-[10px]">{t("evaluation:evaluations.overrideLabel")}</Label>
                             <Input
                               type="number"
                               min={0}
                               max={ev.max_marks}
-                              placeholder="Score"
+                              placeholder={t("evaluation:evaluations.scorePlaceholder")}
                               className="h-8 text-xs"
                               value={overrideValues[overrideKey]?.score ?? ""}
                               onChange={(e) => setOverrideValues((prev) => ({
@@ -340,9 +349,9 @@ export default function EvaluationReview() {
                             />
                           </div>
                           <div className="flex-1 space-y-1">
-                            <Label className="text-[10px]">Feedback</Label>
+                            <Label className="text-[10px]">{t("evaluation:evaluations.feedbackLabel")}</Label>
                             <Input
-                              placeholder="Optional feedback"
+                              placeholder={t("evaluation:evaluations.feedbackPlaceholder")}
                               className="h-8 text-xs"
                               value={overrideValues[overrideKey]?.feedback ?? ""}
                               onChange={(e) => setOverrideValues((prev) => ({
@@ -367,7 +376,7 @@ export default function EvaluationReview() {
                               }
                             }}
                           >
-                            <CheckCircle2 className="h-3 w-3 mr-1" /> Save
+                            <CheckCircle2 className="h-3 w-3 mr-1" /> {t("evaluation:evaluations.save")}
                           </Button>
                         </div>
                       </div>
