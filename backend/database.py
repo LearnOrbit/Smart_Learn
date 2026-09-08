@@ -6,11 +6,12 @@ from sqlalchemy.sql import func
 import enum
 import uuid
 import os
+from pathlib import Path
 
 # Use SQLite instead of PostgreSQL
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "sqlite:///./core_quest.db"
+    f"sqlite:///{(Path(__file__).resolve().parent / 'core_quest.db').as_posix()}"
 )
 
 # For SQLite, we need to add check_same_thread=False
@@ -226,6 +227,32 @@ class Analytics(Base):
     updated_at = Column(DateTime, server_default=func.now(), nullable=False)
 
 
+class AttendanceSession(Base):
+    """A class meeting for which attendance can be recorded."""
+    __tablename__ = "attendance_sessions"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    title = Column(String, nullable=False)
+    session_date = Column(String, nullable=False)
+    subject_id = Column(String, ForeignKey("subjects.id"), nullable=True)
+    classroom_id = Column(String, nullable=True)
+    created_by = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    created_at = Column(DateTime, server_default=func.now(), nullable=False)
+
+
+class AttendanceRecord(Base):
+    """Present/absent/late status for one student in one session."""
+    __tablename__ = "attendance_records"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    session_id = Column(String, ForeignKey("attendance_sessions.id", ondelete="CASCADE"), nullable=False, index=True)
+    student_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    status = Column(String, nullable=False, default="present")
+    note = Column(Text, default="")
+    created_at = Column(DateTime, server_default=func.now(), nullable=False)
+    __table_args__ = (UniqueConstraint("session_id", "student_id", name="uq_attendance_session_student"),)
+
+
 class StudentPerformance(Base):
     """Stores per-student performance metrics entered by teachers."""
     __tablename__ = "student_performance"
@@ -385,6 +412,22 @@ class PastPaperQuestion(Base):
     difficulty = Column(String, nullable=True)    # easy / medium / hard (auto-detected)
     created_by = Column(String, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
+
+
+class ResearchTrend(Base):
+    """A teacher-curated research trend entry; no external feed is implied."""
+    __tablename__ = "research_trends"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    title = Column(String, nullable=False)
+    summary = Column(Text, nullable=False, default="")
+    source = Column(String, nullable=True)
+    url = Column(String, nullable=True)
+    tags = Column(String, nullable=False, default="")
+    trend_date = Column(String, nullable=True)
+    created_by = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    created_at = Column(DateTime, server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
 
 
 # Create all tables

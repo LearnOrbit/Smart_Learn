@@ -855,7 +855,7 @@ class ModelSolutionResponse(BaseModel):
 class QuestionEvaluationResponse(BaseModel):
     id: str
     submission_id: str
-    question_id: str
+    question_id: Optional[str] = None
     student_answer_text: Optional[str] = ""
     ai_score: Optional[float] = None
     final_score: Optional[float] = None
@@ -863,7 +863,10 @@ class QuestionEvaluationResponse(BaseModel):
     similarity_score: Optional[float] = None
     teacher_override: Optional[float] = None
     evaluation_feedback: Optional[str] = ""
+    criteria_results: Optional[List[dict]] = None
     evaluated_at: datetime
+    question_number: Optional[int] = None
+    question_text: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -872,6 +875,100 @@ class QuestionEvaluationResponse(BaseModel):
 class TeacherOverrideRequest(BaseModel):
     final_score: float
     feedback: Optional[str] = None
+
+
+class ResearchTrendCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    summary: str = Field(default="", max_length=5000)
+    source: Optional[str] = Field(default=None, max_length=500)
+    url: Optional[str] = Field(default=None, max_length=1000)
+    tags: List[str] = Field(default_factory=list)
+    trend_date: Optional[str] = Field(default=None, max_length=40)
+
+
+class ResearchTrendResponse(BaseModel):
+    id: str
+    title: str
+    summary: str
+    source: Optional[str] = None
+    url: Optional[str] = None
+    tags: List[str] = Field(default_factory=list)
+    trend_date: Optional[str] = None
+    created_by: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AttendanceSessionCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    session_date: str = Field(min_length=1, max_length=40)
+    subject_id: Optional[str] = None
+    classroom_id: Optional[str] = None
+
+
+class AttendanceRecordCreate(BaseModel):
+    student_id: str
+    status: str = Field(default="present", pattern="^(present|absent|late)$")
+    note: str = Field(default="", max_length=500)
+
+
+class AttendanceBulkRecordCreate(BaseModel):
+    records: List[AttendanceRecordCreate] = Field(min_length=1)
+
+
+class AttendanceRecordResponse(BaseModel):
+    id: str
+    session_id: str
+    student_id: str
+    status: str
+    note: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AttendanceSummaryResponse(BaseModel):
+    student_id: str
+    total_sessions: int
+    present: int
+    absent: int
+    late: int
+    attendance_percentage: float
+
+
+class AttendanceSessionSummaryResponse(BaseModel):
+    session_id: str
+    title: str
+    session_date: str
+    total_records: int
+    present: int
+    absent: int
+    late: int
+    attendance_percentage: float
+
+
+class AttendanceClassroomSummaryResponse(BaseModel):
+    classroom_id: str
+    total_sessions: int
+    total_records: int
+    present: int
+    absent: int
+    late: int
+    attendance_percentage: float
+
+
+class EngagementSummaryResponse(BaseModel):
+    student_id: Optional[str] = None
+    submissions: int
+    graded_submissions: int
+    average_score: Optional[float] = None
+    attendance_percentage: Optional[float] = None
+    chatbot_activity: Optional[int] = None
+    chatbot_activity_status: str
 
 
 # ============= QUESTION GENERATION SCHEMAS =============
@@ -968,6 +1065,9 @@ class LESHistoryResponse(BaseModel):
 
 class ModelStatusResponse(BaseModel):
     """Current active ML model status"""
+    class Config:
+        protected_namespaces = ()
+
     version: Optional[int] = Field(None, description="Model version")
     model_type: Optional[str] = Field(None, description="e.g., RandomForest")
     r_squared: Optional[float] = Field(None, description="Accuracy metric")
