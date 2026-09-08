@@ -3,19 +3,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-# Load backend/.env before anything else reads os.environ. python-dotenv
-# is already in requirements.txt; we just never called it. Without this,
-# GEMINI_API_KEY (and any other server-side env var) is silently None and
-# the AI provider returns "GEMINI_API_KEY is not configured on the server."
-# `override=False` means real shell env vars still win, which is what you
-# want in production.
+
 import os as _os
 from dotenv import load_dotenv
 _ENV_PATH = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), ".env")
 load_dotenv(_ENV_PATH, override=False)
-from database import engine, get_db, Base, Subject, ProgramOutcome, CourseOutcome, LearningOutcome, User, SessionLocal, StudentPerformance, Assignment as DBAssignment, AssignmentLOMapping, Submission as DBSubmission, COPOMappingActive, Question as DBQuestion, ModelSolution as DBModelSolution, QuestionEvaluation as DBQuestionEvaluation, Announcement, PastPaperQuestion
-# Registers the Classroom & ClassroomMember models on `Base` so that the
-# startup `Base.metadata.create_all` below also creates the new tables.
+from database import engine, get_db, Base, Subject, ProgramOutcome, CourseOutcome, LearningOutcome, User, SessionLocal, StudentPerformance, Assignment as DBAssignment, AssignmentLOMapping, Submission as DBSubmission, COPOMappingActive, Question as DBQuestion, ModelSolution as DBModelSolution, QuestionEvaluation as DBQuestionEvaluation, Announcement, PastPaperQuestion, ResearchTrend, AttendanceSession, AttendanceRecord
+
 import database_classroom  # noqa: F401
 from models import (
     Student, Course,
@@ -68,6 +62,9 @@ except ImportError:
 from typing import Optional, Dict
 import os
 import uuid as uuid_mod
+from datetime import datetime, timezone
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
 
 # Create all tables (only in production/development, not in tests)
 try:
@@ -173,7 +170,15 @@ def get_current_user(authorization: Optional[str] = Header(None), db: Session = 
             )
 
     user_id = payload.get("sub")
-    user = db.query(User).filter(User.id == user_id).first()
+    user = None
+    if user_id is not None:
+        try:
+            user = db.query(User).filter(User.id == int(user_id)).first()
+        except (ValueError, TypeError):
+            user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            user = db.query(User).filter(User.email == str(user_id)).first()
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -234,6 +239,10 @@ def get_current_user_optional(authorization: Optional[str] = Header(None), db: S
 # shims resolve this function while the router modules are imported.
 from classroom_api import router as classroom_router  # noqa: E402
 app.include_router(classroom_router, prefix="/api")
+
+# ── Local academic productivity tools ────────────────────────────────────
+from tools_routes import router as tools_router  # noqa: E402
+app.include_router(tools_router, prefix="/api")
 
 # ── AI Assessment Generator (teacher-only; uses server-side GEMINI_API_KEY) ─
 from ai_generator_routes import router as ai_generator_router  # noqa: E402
@@ -1126,6 +1135,56 @@ class ChatRequest(schemas.BaseModel):
     history: list = []
 
 
+class StudyMaterialRequest(schemas.BaseModel):
+    topic: str = "the current course material"
+    source_text: str = ""
+    language: str = "English"
+
+
+@app.post("/api/study-material")
+def generate_study_material(
+    req: StudyMaterialRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """Generate personalized study material for the signed-in student or teacher."""
+    if current_user.get("role") not in ("student", "teacher", "admin", "institution_admin", "hod"):
+        raise HTTPException(status_code=403, detail="Study material is for authenticated academic users")
+
+    source = req.source_text[:50000]
+    prompt = (
+        "Create concise, personalized study material for a student. "
+        "Return markdown with sections: Learning objectives, Key concepts, "
+        "Worked example, Practice questions, and 5-minute recap. "
+        f"Write the entire response in {req.language}. "
+        f"Topic: {req.topic}\nSource material:\n{source or 'No source material was provided.'}"
+    )
+    try:
+        from services.ai import get_provider
+        material = get_provider().generate_text(
+            "You are AcademiQ Assistant, an expert academic tutor creating structured study materials.",
+            prompt,
+            temperature=0.3,
+        )
+    except Exception as e:
+        print(f"Study material fallback activated: {e}")
+        material = (
+            f"## Study Material: {req.topic}\n\n"
+            "### Learning objectives\n"
+            "- Explain the main ideas in your own words.\n"
+            "- Apply the ideas to a practical example.\n\n"
+            "### Key concepts\n"
+            "Review the definitions, relationships, and examples in the source material. "
+            "Use active recall instead of rereading.\n\n"
+            "### Practice questions\n"
+            "1. What is the central idea?\n"
+            "2. How would you apply it to a new problem?\n"
+            "3. Which part needs another review?\n\n"
+            "### 5-minute recap\n"
+            "Write three key points, one example, and one question you still have."
+        )
+    return {"material": material, "topic": req.topic}
+
+
 @app.post("/api/chat")
 def student_chat(
     req: ChatRequest,
@@ -1133,9 +1192,9 @@ def student_chat(
     db: Session = Depends(get_db),
 ):
     """AI chatbot for students – answers academic questions using their performance context."""
-    if current_user.get("role") != "student":
+    if current_user.get("role") not in ("student", "teacher", "admin", "institution_admin", "hod"):
         raise HTTPException(
-            status_code=403, detail="Chatbot is for students only")
+            status_code=403, detail="Chatbot is for authenticated users")
 
     # Bypass ML_AVAILABLE strict check to allow the demonstration mock logic to run
     # if not ML_AVAILABLE:
@@ -1189,22 +1248,77 @@ def student_chat(
     messages.append({"role": "user", "content": req.message})
 
     try:
-        from ai_advisory import get_client, MODEL
-        anthropic_client = get_client()
-        
-        response = anthropic_client.messages.create(
-            model=MODEL,
-            max_tokens=1024,
-            system=system_prompt,
-            messages=messages,
+        from services.ai import get_provider
+        conversation = "\n\n".join(
+            f"{message['role'].title()}: {message['content']}"
+            for message in messages
         )
-        reply = response.content[0].text
+        reply = get_provider().generate_text(
+            system_prompt,
+            conversation,
+            temperature=0.4,
+        )
     except Exception as e:
         # Fallback Mock logic for Demonstration without API Keys
         print(f"Chatbot API Fallback activated due to: {str(e)}")
         query = req.message.lower()
         
-        if "summary" in query or "summarize" in query:
+        if "newton" in query or "laws of motion" in query:
+            reply = (
+                "### 🍎 Newton's Laws of Motion Explained\n\n"
+                "Here is a complete, clear breakdown of Sir Isaac Newton's three fundamental laws of classical mechanics:\n\n"
+                "---\n\n"
+                "#### 1. Newton's First Law: Law of Inertia\n"
+                "> *\"An object at rest stays at rest, and an object in motion stays in motion at a constant velocity, unless acted upon by a net external force.\"*\n\n"
+                "• **Key Concept:** **Inertia** is the natural tendency of an object to resist changes in its velocity. An object's mass determines its inertia.\n"
+                "• **Real-World Example:** When a bus suddenly stops, passengers lurch forward because their upper bodies tend to continue moving forward at the bus's original speed.\n\n"
+                "---\n\n"
+                "#### 2. Newton's Second Law: Force and Acceleration\n"
+                "> *\"The acceleration of an object is directly proportional to the net force acting upon it and inversely proportional to its mass.\"*\n\n"
+                "$$\\mathbf{F}_{\\text{net}} = m \\cdot \\mathbf{a}$$\n\n"
+                "• **Variables:**\n"
+                "  - $\\mathbf{F}$ = Net force (Newtons, $\\text{N} = \\text{kg}\\cdot\\text{m/s}^2$)\n"
+                "  - $m$ = Mass (kg)\n"
+                "  - $\\mathbf{a}$ = Acceleration ($\\text{m/s}^2$)\n"
+                "• **Alternate Momentum Form:** $\\mathbf{F} = \\frac{d\\mathbf{p}}{dt}$ (force equals the time rate of change of linear momentum).\n"
+                "• **Real-World Example:** Pushing an empty car requires much less force than pushing a loaded truck to achieve the same rate of acceleration.\n\n"
+                "---\n\n"
+                "#### 3. Newton's Third Law: Action and Reaction\n"
+                "> *\"For every action, there is an equal and opposite reaction.\"*\n\n"
+                "$$\\mathbf{F}_{A \\to B} = -\\mathbf{F}_{B \\to A}$$\n\n"
+                "• **Key Insight:** Forces always occur in pairs acting on **two different objects**. This is why action and reaction forces never cancel each other out.\n"
+                "• **Real-World Example:** Rocket propulsion—the engine expels burning gas backward with huge force (action), and the gas exerts an equal force pushing the rocket forward (reaction).\n\n"
+                "---\n\n"
+                "#### 🎯 Knowledge Check\n"
+                "*If you push against a heavy stone wall with 50 N of force, how much force is the wall exerting back on you?* (Answer: exactly 50 N in the opposite direction!)\n\n"
+                "*(Note: You are currently receiving offline tutor guidance. To enable live generative AI responses, configure a valid `GEMINI_API_KEY` in `backend/.env`.)*"
+            )
+        elif "binary search" in query:
+            reply = (
+                "### 🔍 Binary Search Algorithm Explained\n\n"
+                "**Binary Search** is an efficient divide-and-conquer algorithm for finding an element in a **sorted array**.\n\n"
+                "• **Precondition:** The input array must already be sorted.\n"
+                "• **Time Complexity:** $\\mathcal{O}(\\log n)$ (Best: $\\mathcal{O}(1)$, Worst: $\\mathcal{O}(\\log n)$)\n"
+                "• **Space Complexity:** $\\mathcal{O}(1)$ iterative, $\\mathcal{O}(\\log n)$ recursive.\n\n"
+                "#### Step-by-Step Logic:\n"
+                "1. Set `low = 0`, `high = n - 1`.\n"
+                "2. Calculate `mid = low + (high - low) // 2` (prevents integer overflow).\n"
+                "3. If `arr[mid] == target`, return `mid`.\n"
+                "4. If `target < arr[mid]`, eliminate the right half: `high = mid - 1`.\n"
+                "5. If `target > arr[mid]`, eliminate the left half: `low = mid + 1`.\n"
+                "6. If `low > high`, target is not in array.\n\n"
+                "*(Note: Running in offline tutor mode. Set a valid `GEMINI_API_KEY` in `backend/.env` for dynamic responses.)*"
+            )
+        elif "oop" in query or "object oriented" in query or "polymorphism" in query:
+            reply = (
+                "### 💻 The 4 Pillars of Object-Oriented Programming (OOP)\n\n"
+                "1. **Encapsulation:** Bundling data (attributes) and methods that operate on that data inside a class, restricting direct access using access modifiers (private, protected, public).\n"
+                "2. **Abstraction:** Hiding complex implementation details and exposing only essential interfaces (e.g. abstract classes and interfaces).\n"
+                "3. **Inheritance:** Enabling a child class to inherit fields and behaviors from a parent class, promoting code reusability (`class Dog extends Animal`).\n"
+                "4. **Polymorphism:** The ability of different objects to respond to the same interface or method call in different ways (Method Overriding & Overloading).\n\n"
+                "*(Note: Running in offline tutor mode. Set a valid `GEMINI_API_KEY` in `backend/.env` for dynamic responses.)*"
+            )
+        elif "summary" in query or "summarize" in query:
             reply = "📚 **Document Summary**\n\nBased on your loaded context materials, here is what you need to know:\n\n1. The document extensively covers fundamental theoretical concepts related to your course outcomes.\n2. Real-world applications and methodological frameworks are the core focus.\n3. I highly recommend reviewing the concluding sections for deeper insights before your next test."
         elif "study guide" in query:
             reply = "🎯 **Personalized Study Guide**\n\n• **Core Concept:** Direct your focus on analyzing the primary data structures mentioned in the text.\n• **Important Definitions:** Memorize the key terms highlighted in section 2.\n• **Review Priority:** High. I recommend utilizing active recall flashcards for this material."
@@ -1215,7 +1329,20 @@ def student_chat(
         elif "quiz" in query:
             reply = "📝 **Knowledge Check**\n\n1. What is the fundamental disadvantage of the method described in paragraph 3?\n2. Compare and contrast the two competing theories mentioned in the text.\n3. How would you apply this architecture in a real-world edge case scenario?\n\n*Try answering these out loud to test your mastery!*"
         else:
-            reply = f"That's a very insightful question! \n\nLooking at your specific query about '{req.message[:40]}...', and cross-referencing it with your current academic metrics, I'd say you are absolutely on the right track. Continue exploring this vector!\n\n*(Note: I am running in Offline Demonstration Mode because your Anthropic API Key isn't configured, but I'm ready to handle full GenAI once it's plugged in!)*"
+            clean_q = req.message.replace('\n', ' ').strip()
+            reply = (
+                f"### 🎓 Academic Tutor Explanation\n\n"
+                f"**Topic:** *{clean_q[:80]}*\n\n"
+                f"1. **Core Concept & Definition:**\n"
+                f"   Break down the topic into its first principles. Define the primary term, its governing mathematical or logical rule, and why it is significant in this curriculum.\n\n"
+                f"2. **Step-by-Step Method / Application:**\n"
+                f"   Work through a representative problem or implementation. Identify the given variables, select the applicable formula or algorithm, and compute the result step-by-step.\n\n"
+                f"3. **Common Exam Pitfalls:**\n"
+                f"   Be careful with boundary conditions, unit conversions, and edge cases. Ensure you can articulate the key assumptions behind the model.\n\n"
+                f"4. **Actionable Next Step:**\n"
+                f"   Review the corresponding chapter in your course material and practice at least two problems using active recall.\n\n"
+                f"*(Note: Currently running in offline tutor mode. To enable live Gemini AI generation, add your API key to `backend/.env`.)*"
+            )
 
     return {"reply": reply}
 
@@ -1423,7 +1550,7 @@ def predict_student_performance(
     Authorization: Teachers only. Students can view but not edit metrics.
     """
     # Only teachers can submit new metrics
-    if current_user.role != "teacher":
+    if current_user.get("role") != "teacher":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only teachers can submit performance metrics"
@@ -1464,7 +1591,7 @@ def analyze_learning_gaps(
     Authorization: Teachers only. Only teachers can analyze student gaps.
     """
     # Only teachers can analyze gaps
-    if current_user.role != "teacher":
+    if current_user.get("role") != "teacher":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only teachers can analyze learning gaps"
@@ -1508,7 +1635,7 @@ def analyze_learning_gaps(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/analytics/advisory-plan")
+@app.post("/api/analytics/advisory-plan")
 def generate_advisory_plan(
     request_body: dict,
     db: Session = Depends(get_db),
@@ -1519,7 +1646,7 @@ def generate_advisory_plan(
     Authorization: Teachers only. Only teachers can generate advisory plans.
     """
     # Only teachers can generate advisory plans
-    if current_user.role != "teacher":
+    if current_user.get("role") != "teacher":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only teachers can generate advisory plans"
@@ -1623,7 +1750,7 @@ def evaluate_intervention(
     Authorization: Teachers only. Only teachers can evaluate interventions.
     """
     # Only teachers can evaluate interventions
-    if current_user.role != "teacher":
+    if current_user.get("role") != "teacher":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only teachers can evaluate interventions"
@@ -1671,7 +1798,7 @@ def get_student_analytics(
     try:
         # For students, get their own data
         # For teachers, they need to query specific student
-        student_id = current_user.id if current_user.role == "student" else current_user.id
+        student_id = current_user.get("id")
 
         # Fetch student's actual grades and submissions
         submissions = db.query(Submission).filter(
@@ -2133,7 +2260,8 @@ def delete_learning_outcome(
 @app.post("/api/parse-outcomes", response_model=list[schemas.ParsedOutcomeItem])
 def parse_outcomes_text(request: schemas.ParseOutcomesRequest):
     """Parse raw text and extract PO/CO/LO outcomes using strict LLM parsing."""
-    import google.generativeai as genai
+    from google import genai
+    from google.genai import types
     import os
     import json
     
@@ -2190,20 +2318,16 @@ OUTPUT FORMAT (STRICT JSON ONLY):
 }"""
 
     try:
-        genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-        # Using gemini-1.5-flash for fastest parsing tasks, or fallback to gemini-pro
-        model = genai.GenerativeModel("gemini-1.5-flash")
-        
-        generation_config = {
-            "temperature": 0.2
-        }
-        
-        response = model.generate_content([
-            FINAL_PROMPT,
-            request.text
-        ], generation_config=generation_config)
-        
-        response_text = response.text
+        client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+        response = client.models.generate_content(
+            model=os.getenv("GEMINI_MODEL", "gemini-2.0-flash"),
+            contents=f"{FINAL_PROMPT}\n\n{request.text}",
+            config=types.GenerateContentConfig(
+                temperature=0.2,
+                response_mime_type="application/json",
+            ),
+        )
+        response_text = response.text or "{}"
         
         # Extract JSON from response
         start = response_text.find("{")
@@ -3082,6 +3206,52 @@ def delete_model_solution(
 # ──────────────────────────────────────────────────────────────────────
 # SHARED AUTO-EVALUATION HELPER
 # ──────────────────────────────────────────────────────────────────────
+def _score_structured_rubric(rubric: str, answer: str, max_marks: int) -> list[dict] | None:
+    """Return deterministic criterion scores for valid JSON rubrics only."""
+    import json
+    try:
+        parsed = json.loads(rubric)
+    except (TypeError, ValueError):
+        return None
+
+    criteria = parsed.get("criteria") if isinstance(parsed, dict) else parsed
+    if not isinstance(criteria, list):
+        return None
+
+    answer_lower = (answer or "").lower()
+    results = []
+    total_weight = sum(float(item.get("marks", item.get("weight", 1)) or 1)
+                       for item in criteria if isinstance(item, dict)) or 1
+    for index, item in enumerate(criteria, start=1):
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("name") or item.get("criterion") or f"Criterion {index}")
+        raw_keywords = item.get("keywords") or item.get("terms") or item.get("evidence") or [name]
+        keywords = [str(value).strip().lower() for value in raw_keywords] if isinstance(raw_keywords, list) else [str(raw_keywords).strip().lower()]
+        keywords = [value for value in keywords if value]
+        matched = [value for value in keywords if value in answer_lower]
+        weight = float(item.get("marks", item.get("weight", 1)) or 1)
+        ratio = len(matched) / len(keywords) if keywords else 0.0
+        results.append({
+            "criterion": name,
+            "score": round(weight * ratio, 2),
+            "max_score": round(weight, 2),
+            "matched": bool(matched),
+            "matched_keywords": matched,
+            "weight": round(weight / total_weight, 4),
+        })
+    return results or None
+
+
+def _rubric_results_for_question(solutions: list, question_id: str | None, answer: str, max_marks: int) -> list[dict] | None:
+    for solution in solutions:
+        if solution.question_id == question_id or solution.question_id is None:
+            results = _score_structured_rubric(solution.rubric or "", answer, max_marks)
+            if results is not None:
+                return results
+    return None
+
+
 def _run_auto_evaluation(submission_id: str, db: Session) -> dict:
     """Score a student submission against model solutions and autosave.
     Returns a summary dict. Safe to call multiple times (upsert)."""
@@ -3232,6 +3402,12 @@ def _run_auto_evaluation(submission_id: str, db: Session) -> dict:
             elif sim > 0.7:
                 feedback += " ✓ Good coverage of the model answer."
 
+        criteria_results = _rubric_results_for_question(solutions, q.id, student_ans, q.marks)
+        if criteria_results is not None and not pdf_is_identical:
+            criterion_max = sum(item["max_score"] for item in criteria_results) or 1
+            criterion_score = sum(item["score"] for item in criteria_results)
+            ai_score = min(float(q.marks), round(criterion_score / criterion_max * q.marks, 1))
+
         # Upsert evaluation row
         existing_ev = db.query(DBQuestionEvaluation).filter(
             DBQuestionEvaluation.submission_id == submission_id,
@@ -3258,7 +3434,8 @@ def _run_auto_evaluation(submission_id: str, db: Session) -> dict:
         total_ai += ai_score
         total_max += q.marks
         results.append({"question_id": q.id, "q_num": q.question_number,
-                        "ai_score": ai_score, "max": q.marks, "sim": sim})
+                "ai_score": ai_score, "max": q.marks, "sim": sim,
+                "criteria_results": criteria_results})
 
     # ── NO-QUESTIONS FALLBACK ─────────────────────────────────────────
     # If the assignment has no questions defined, score the entire
@@ -3308,6 +3485,11 @@ def _run_auto_evaluation(submission_id: str, db: Session) -> dict:
             elif sim_fallback > 0.7:
                 fb_feedback += " \u2713 Good coverage of the model answer."
 
+        fallback_criteria = _rubric_results_for_question(solutions, None, student_text, total_marks_fallback)
+        if fallback_criteria is not None and not pdf_is_identical:
+            criterion_max = sum(item["max_score"] for item in fallback_criteria) or 1
+            criterion_score = sum(item["score"] for item in fallback_criteria)
+            earned_fallback = min(float(total_marks_fallback), round(criterion_score / criterion_max * total_marks_fallback, 1))
         total_ai = earned_fallback
         total_max = total_marks_fallback
         results.append({
@@ -3317,6 +3499,7 @@ def _run_auto_evaluation(submission_id: str, db: Session) -> dict:
             "max": total_marks_fallback,
             "sim": 1.0 if pdf_is_identical else sim_fallback,
             "note": "whole-submission fallback (no questions defined)",
+            "criteria_results": fallback_criteria,
         })
     # ────────────────────────────────────────────────────────────────
 
@@ -3866,6 +4049,12 @@ def evaluate_submission(
 
             ai_score = min(q.marks, round(ai_score + rubric_bonus, 1))
 
+        criteria_results = _rubric_results_for_question(solutions, q.id, student_ans, q.marks)
+        if criteria_results is not None and not pdf_is_identical_ev:
+            criterion_max = sum(item["max_score"] for item in criteria_results) or 1
+            criterion_score = sum(item["score"] for item in criteria_results)
+            ai_score = min(float(q.marks), round(criterion_score / criterion_max * q.marks, 1))
+
         # Check if evaluation already exists
         existing = db.query(DBQuestionEvaluation).filter(
             DBQuestionEvaluation.submission_id == submission_id,
@@ -3906,6 +4095,7 @@ def evaluate_submission(
             "ai_score": ai_score,
             "max_marks": q.marks,
             "similarity": sim,
+            "criteria_results": criteria_results,
         })
 
     # ── NO-QUESTIONS FALLBACK ─────────────────────────────────────────
@@ -3952,6 +4142,11 @@ def evaluate_submission(
             elif sim_fallback > 0.7:
                 _ev_feedback += " \u2713 Good coverage of the model answer."
 
+        fallback_criteria = _rubric_results_for_question(solutions, None, student_text, total_marks_fallback)
+        if fallback_criteria is not None and not pdf_is_identical_ev:
+            criterion_max = sum(item["max_score"] for item in fallback_criteria) or 1
+            criterion_score = sum(item["score"] for item in fallback_criteria)
+            earned_fallback = min(float(total_marks_fallback), round(criterion_score / criterion_max * total_marks_fallback, 1))
         total_ai = earned_fallback
         total_max = total_marks_fallback
         
@@ -3988,6 +4183,7 @@ def evaluate_submission(
             "ai_score": earned_fallback,
             "max_marks": total_marks_fallback,
             "similarity": sim_fallback,
+            "criteria_results": fallback_criteria,
         })
     # ────────────────────────────────────────────────────────────────
 
@@ -4010,9 +4206,177 @@ def get_evaluations(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    return db.query(DBQuestionEvaluation).filter(
+    evaluations = db.query(DBQuestionEvaluation).filter(
         DBQuestionEvaluation.submission_id == submission_id
     ).all()
+    submission = db.query(DBSubmission).filter(DBSubmission.id == submission_id).first()
+    solutions = db.query(DBModelSolution).filter(
+        DBModelSolution.assignment_id == submission.assignment_id
+    ).all() if submission else []
+    questions = {q.id: q for q in db.query(DBQuestion).filter(
+        DBQuestion.assignment_id == submission.assignment_id
+    ).all()} if submission else {}
+    return [
+        {
+            "id": evaluation.id,
+            "submission_id": evaluation.submission_id,
+            "question_id": evaluation.question_id,
+            "student_answer_text": evaluation.student_answer_text,
+            "ai_score": evaluation.ai_score,
+            "final_score": evaluation.final_score,
+            "max_marks": evaluation.max_marks,
+            "similarity_score": evaluation.similarity_score,
+            "teacher_override": evaluation.teacher_override,
+            "evaluation_feedback": evaluation.evaluation_feedback,
+            "evaluated_at": evaluation.evaluated_at,
+            "question_number": questions.get(evaluation.question_id).question_number if evaluation.question_id in questions else 0,
+            "question_text": questions.get(evaluation.question_id).question_text if evaluation.question_id in questions else None,
+            "criteria_results": _rubric_results_for_question(
+                solutions, evaluation.question_id, evaluation.student_answer_text or "", evaluation.max_marks
+            ),
+        }
+        for evaluation in evaluations
+    ]
+
+
+def _research_trend_response(trend: ResearchTrend) -> dict:
+    return {
+        "id": trend.id,
+        "title": trend.title,
+        "summary": trend.summary,
+        "source": trend.source,
+        "url": trend.url,
+        "tags": [tag for tag in (trend.tags or "").split(",") if tag],
+        "trend_date": trend.trend_date,
+        "created_by": trend.created_by,
+        "created_at": trend.created_at,
+        "updated_at": trend.updated_at,
+    }
+
+
+@app.post("/api/research-trends", response_model=schemas.ResearchTrendResponse, status_code=201)
+def create_research_trend(
+    payload: schemas.ResearchTrendCreate,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    trend = ResearchTrend(
+        title=payload.title.strip(),
+        summary=payload.summary.strip(),
+        source=payload.source.strip() if payload.source else None,
+        url=payload.url.strip() if payload.url else None,
+        tags=",".join(tag.strip() for tag in payload.tags if tag.strip()),
+        trend_date=payload.trend_date,
+        created_by=current_user["id"],
+    )
+    db.add(trend)
+    db.commit()
+    db.refresh(trend)
+    return _research_trend_response(trend)
+
+
+@app.get("/api/research-trends", response_model=list[schemas.ResearchTrendResponse])
+def list_research_trends(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    trends = db.query(ResearchTrend).order_by(ResearchTrend.created_at.desc()).all()
+    return [_research_trend_response(trend) for trend in trends]
+
+
+@app.get("/api/research-trends/search/crossref", response_model=list[schemas.ResearchTrendResponse])
+def search_crossref_research_trends(
+    q: str,
+    rows: int = 10,
+    current_user: dict = Depends(get_current_user),
+):
+    """Search Crossref without persisting results; import uses the normal CRUD endpoint."""
+    query = q.strip()
+    if not query:
+        raise HTTPException(status_code=422, detail="Search query is required")
+    rows = max(1, min(rows, 25))
+    request_url = "https://api.crossref.org/works?" + urlencode({"query": query, "rows": rows, "select": "DOI,title,abstract,URL,published,author,container-title"})
+    try:
+        request = Request(request_url, headers={"User-Agent": "Smart-Learn/1.0 (research trends)"})
+        with urlopen(request, timeout=10) as response:
+            payload = __import__("json").load(response)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Crossref search failed: {exc}") from exc
+
+    now = datetime.now(timezone.utc)
+    results = []
+    for item in payload.get("message", {}).get("items", []):
+        title = (item.get("title") or [item.get("DOI") or "Untitled"])[0].strip()
+        abstract = item.get("abstract") or ""
+        abstract = __import__("re").sub(r"<[^>]+>", "", abstract).strip()
+        published = item.get("published", {}).get("date-parts", [[]])[0]
+        trend_date = "-".join(str(part) for part in published) if published else None
+        authors = [author.get("family") or author.get("literal") for author in item.get("author", [])]
+        tags = [tag for tag in authors[:3] if tag]
+        results.append({
+            "id": f"crossref:{item.get('DOI') or title}",
+            "title": title,
+            "summary": abstract[:5000],
+            "source": (item.get("container-title") or ["Crossref"])[0],
+            "url": item.get("URL") or (f"https://doi.org/{item['DOI']}" if item.get("DOI") else None),
+            "tags": tags,
+            "trend_date": trend_date,
+            "created_by": "crossref",
+            "created_at": now,
+            "updated_at": now,
+        })
+    return results
+
+
+@app.get("/api/research-trends/{trend_id}", response_model=schemas.ResearchTrendResponse)
+def get_research_trend(
+    trend_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    trend = db.query(ResearchTrend).filter(ResearchTrend.id == trend_id).first()
+    if not trend:
+        raise HTTPException(status_code=404, detail="Research trend not found")
+    return _research_trend_response(trend)
+
+
+@app.put("/api/research-trends/{trend_id}", response_model=schemas.ResearchTrendResponse)
+def update_research_trend(
+    trend_id: str,
+    payload: schemas.ResearchTrendCreate,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    trend = db.query(ResearchTrend).filter(ResearchTrend.id == trend_id).first()
+    if not trend:
+        raise HTTPException(status_code=404, detail="Research trend not found")
+    if trend.created_by != current_user["id"] and current_user.get("role") != "teacher":
+        raise HTTPException(status_code=403, detail="Only the owner or a teacher can update this trend")
+    trend.title = payload.title.strip()
+    trend.summary = payload.summary.strip()
+    trend.source = payload.source.strip() if payload.source else None
+    trend.url = payload.url.strip() if payload.url else None
+    trend.tags = ",".join(tag.strip() for tag in payload.tags if tag.strip())
+    trend.trend_date = payload.trend_date
+    db.commit()
+    db.refresh(trend)
+    return _research_trend_response(trend)
+
+
+@app.delete("/api/research-trends/{trend_id}")
+def delete_research_trend(
+    trend_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    trend = db.query(ResearchTrend).filter(ResearchTrend.id == trend_id).first()
+    if not trend:
+        raise HTTPException(status_code=404, detail="Research trend not found")
+    if trend.created_by != current_user["id"] and current_user.get("role") != "teacher":
+        raise HTTPException(status_code=403, detail="Only the owner or a teacher can delete this trend")
+    db.delete(trend)
+    db.commit()
+    return {"message": "Research trend deleted"}
 
 
 @app.put("/api/evaluations/{evaluation_id}/override")
@@ -4301,6 +4665,169 @@ def delete_co_po_mapping(
 # ============= REPORT / EXPORT ENDPOINTS =============
 
 
+def _attendance_summary(student_id: str, db: Session) -> dict:
+    records = db.query(AttendanceRecord).filter(AttendanceRecord.student_id == student_id).all()
+    present = sum(record.status == "present" for record in records)
+    late = sum(record.status == "late" for record in records)
+    absent = sum(record.status == "absent" for record in records)
+    total = len(records)
+    percentage = round(((present + late * 0.5) / total) * 100, 2) if total else 0.0
+    return {
+        "student_id": student_id,
+        "total_sessions": total,
+        "present": present,
+        "absent": absent,
+        "late": late,
+        "attendance_percentage": percentage,
+    }
+
+
+def _upsert_attendance_record(session_id: str, payload: schemas.AttendanceRecordCreate, db: Session):
+    record = db.query(AttendanceRecord).filter(
+        AttendanceRecord.session_id == session_id,
+        AttendanceRecord.student_id == payload.student_id,
+    ).first()
+    if record:
+        record.status = payload.status
+        record.note = payload.note
+    else:
+        record = AttendanceRecord(session_id=session_id, **payload.model_dump())
+        db.add(record)
+    return record
+
+
+def _refresh_student_attendance(student_id: str, db: Session):
+    summary = _attendance_summary(student_id, db)
+    performance = db.query(StudentPerformance).filter(StudentPerformance.student_id == student_id).first()
+    if performance:
+        performance.attendance = round(summary["attendance_percentage"])
+
+
+@app.post("/api/attendance/sessions", status_code=201)
+def create_attendance_session(
+    payload: schemas.AttendanceSessionCreate,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.get("role") != "teacher":
+        raise HTTPException(status_code=403, detail="Only teachers can create attendance sessions")
+    session = AttendanceSession(**payload.model_dump(), created_by=current_user["id"])
+    db.add(session)
+    db.commit()
+    db.refresh(session)
+    return {"id": session.id, **payload.model_dump(), "created_by": session.created_by}
+
+
+@app.post("/api/attendance/sessions/{session_id}/records", response_model=schemas.AttendanceRecordResponse)
+def record_attendance(
+    session_id: str,
+    payload: schemas.AttendanceRecordCreate,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.get("role") != "teacher":
+        raise HTTPException(status_code=403, detail="Only teachers can record attendance")
+    session = db.query(AttendanceSession).filter(AttendanceSession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Attendance session not found")
+    record = _upsert_attendance_record(session_id, payload, db)
+    db.commit()
+    db.refresh(record)
+    _refresh_student_attendance(payload.student_id, db)
+    db.commit()
+    return record
+
+
+@app.post("/api/attendance/sessions/{session_id}/records/bulk")
+def record_attendance_bulk(
+    session_id: str,
+    payload: schemas.AttendanceBulkRecordCreate,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.get("role") != "teacher":
+        raise HTTPException(status_code=403, detail="Only teachers can record attendance")
+    session = db.query(AttendanceSession).filter(AttendanceSession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Attendance session not found")
+    records = [_upsert_attendance_record(session_id, record, db) for record in payload.records]
+    db.commit()
+    for record in records:
+        db.refresh(record)
+        _refresh_student_attendance(record.student_id, db)
+    db.commit()
+    return {"session_id": session_id, "updated": len(records), "records": records}
+
+
+@app.get("/api/attendance/sessions/{session_id}/summary", response_model=schemas.AttendanceSessionSummaryResponse)
+def get_attendance_session_summary(
+    session_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.get("role") != "teacher":
+        raise HTTPException(status_code=403, detail="Only teachers can view session summaries")
+    session = db.query(AttendanceSession).filter(AttendanceSession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Attendance session not found")
+    records = db.query(AttendanceRecord).filter(AttendanceRecord.session_id == session_id).all()
+    present = sum(record.status == "present" for record in records)
+    late = sum(record.status == "late" for record in records)
+    absent = sum(record.status == "absent" for record in records)
+    total = len(records)
+    return {"session_id": session.id, "title": session.title, "session_date": session.session_date,
+            "total_records": total, "present": present, "absent": absent, "late": late,
+            "attendance_percentage": round(((present + late * 0.5) / total) * 100, 2) if total else 0.0}
+
+
+@app.get("/api/attendance/classrooms/{classroom_id}/summary", response_model=schemas.AttendanceClassroomSummaryResponse)
+def get_attendance_classroom_summary(
+    classroom_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.get("role") != "teacher":
+        raise HTTPException(status_code=403, detail="Only teachers can view classroom summaries")
+    sessions = db.query(AttendanceSession).filter(AttendanceSession.classroom_id == classroom_id).all()
+    records = db.query(AttendanceRecord).filter(AttendanceRecord.session_id.in_([session.id for session in sessions])).all() if sessions else []
+    present = sum(record.status == "present" for record in records)
+    late = sum(record.status == "late" for record in records)
+    absent = sum(record.status == "absent" for record in records)
+    total = len(records)
+    return {"classroom_id": classroom_id, "total_sessions": len(sessions), "total_records": total,
+            "present": present, "absent": absent, "late": late,
+            "attendance_percentage": round(((present + late * 0.5) / total) * 100, 2) if total else 0.0}
+
+
+@app.get("/api/engagement/summary", response_model=schemas.EngagementSummaryResponse)
+def get_engagement_summary(
+    student_id: Optional[str] = None,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    target_id = student_id or current_user["id"]
+    if current_user.get("role") != "teacher" and target_id != current_user["id"]:
+        raise HTTPException(status_code=403, detail="You cannot view this engagement summary")
+    submissions = db.query(DBSubmission).filter(DBSubmission.student_id == target_id).all()
+    graded = [submission for submission in submissions if submission.marks is not None]
+    average_score = round(sum(submission.marks for submission in graded) / len(graded), 2) if graded else None
+    attendance = _attendance_summary(target_id, db)
+    return {"student_id": target_id, "submissions": len(submissions), "graded_submissions": len(graded),
+            "average_score": average_score, "attendance_percentage": attendance["attendance_percentage"],
+            "chatbot_activity": None, "chatbot_activity_status": "unavailable: chatbot conversations are not persisted"}
+
+
+@app.get("/api/attendance/summary/{student_id}", response_model=schemas.AttendanceSummaryResponse)
+def get_attendance_summary(
+    student_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.get("role") != "teacher" and current_user.get("id") != student_id:
+        raise HTTPException(status_code=403, detail="You cannot view this attendance summary")
+    return _attendance_summary(student_id, db)
+
+
 @app.get("/api/reports/co-attainment")
 def report_co_attainment(
     current_user: dict = Depends(get_current_user),
@@ -4519,6 +5046,108 @@ def export_po_attainment_csv(
         headers={
             "Content-Disposition": "attachment; filename=po_attainment_report.csv"}
     )
+
+
+@app.get("/api/reports/accreditation-package")
+def export_accreditation_package(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Download a reproducible accreditation evidence package."""
+    if current_user.get("role") != "teacher":
+        raise HTTPException(status_code=403, detail="Only teachers can export accreditation packages")
+
+    import csv
+    import io
+    import json
+    import zipfile
+    from datetime import datetime, timezone
+    from fastapi.responses import StreamingResponse
+
+    co_report = report_co_attainment(current_user=current_user, db=db)
+    po_report = report_po_attainment(current_user=current_user, db=db)
+    students = db.query(User).filter(User.role == "student").all()
+
+    def csv_text(headers, rows):
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(headers)
+        writer.writerows(rows)
+        return output.getvalue()
+
+    student_rows = []
+    for student in students:
+        performance = db.query(StudentPerformance).filter(StudentPerformance.student_id == student.id).first()
+        summary = _attendance_summary(student.id, db)
+        student_rows.append([
+            student.id, student.name, student.email,
+            performance.student_marks if performance else "",
+            performance.attendance if performance else summary["attendance_percentage"],
+            summary["total_sessions"], summary["present"], summary["absent"], summary["late"],
+        ])
+
+    generated_at = datetime.now(timezone.utc).isoformat()
+    manifest = {
+        "package": "Smart Learn accreditation evidence",
+        "generated_at": generated_at,
+        "generated_by": current_user.get("id"),
+        "sources": ["co_attainment_report", "po_attainment_report", "student_performance_and_attendance"],
+        "files": ["manifest.json", "co_attainment.csv", "po_attainment.csv", "student_evidence.csv"],
+    }
+    archive = io.BytesIO()
+    with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as bundle:
+        bundle.writestr("manifest.json", json.dumps(manifest, indent=2))
+        bundle.writestr("co_attainment.csv", csv_text(
+            ["CO Code", "Description", "Avg Score", "Students", "LO Count"],
+            [[r["co_code"], r["co_description"], r["avg_score"], r["student_count"], r["lo_count"]] for r in co_report],
+        ))
+        bundle.writestr("po_attainment.csv", csv_text(
+            ["PO Code", "Description", "Weighted Avg Score", "CO Count"],
+            [[r["po_code"], r["po_description"], r["weighted_avg_score"], r["co_count"]] for r in po_report],
+        ))
+        bundle.writestr("student_evidence.csv", csv_text(
+            ["Student ID", "Name", "Email", "Marks", "Attendance %", "Sessions", "Present", "Absent", "Late"],
+            student_rows,
+        ))
+    archive.seek(0)
+    return StreamingResponse(
+        archive,
+        media_type="application/zip",
+        headers={"Content-Disposition": "attachment; filename=accreditation_evidence_package.zip"},
+    )
+
+
+@app.get("/api/reports/accreditation-html")
+def export_accreditation_html(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Download a print-friendly accreditation report assembled from current report data."""
+    if current_user.get("role") != "teacher":
+        raise HTTPException(status_code=403, detail="Only teachers can export accreditation reports")
+    from fastapi.responses import HTMLResponse
+    from html import escape
+
+    co_report = report_co_attainment(current_user=current_user, db=db)
+    po_report = report_po_attainment(current_user=current_user, db=db)
+    students = db.query(User).filter(User.role == "student").all()
+    generated_at = datetime.now(timezone.utc).isoformat()
+    co_rows = "".join(f"<tr><td>{escape(str(row['co_code']))}</td><td>{escape(str(row['co_description']))}</td><td>{row['avg_score']:.2f}</td><td>{row['student_count']}</td></tr>" for row in co_report)
+    po_rows = "".join(f"<tr><td>{escape(str(row['po_code']))}</td><td>{escape(str(row['po_description']))}</td><td>{row['weighted_avg_score']:.2f}</td><td>{row['co_count']}</td></tr>" for row in po_report)
+    student_rows = []
+    for student in students:
+        performance = db.query(StudentPerformance).filter(StudentPerformance.student_id == student.id).first()
+        attendance = _attendance_summary(student.id, db)
+        student_rows.append(f"<tr><td>{escape(student.name)}</td><td>{escape(student.email)}</td><td>{performance.student_marks if performance else 'N/A'}</td><td>{attendance['attendance_percentage']:.2f}%</td><td>{attendance['total_sessions']}</td></tr>")
+    html = f"""<!doctype html><html><head><meta charset='utf-8'><title>Smart Learn Accreditation Report</title>
+<style>body{{font-family:Arial,sans-serif;color:#172033;max-width:1000px;margin:0 auto;padding:32px}}h1{{margin-bottom:4px}}h2{{border-bottom:2px solid #334155;padding-bottom:6px;margin-top:32px}}.meta{{color:#475569;margin-bottom:24px}}table{{border-collapse:collapse;width:100%;margin:12px 0 24px}}th,td{{border:1px solid #cbd5e1;padding:8px;text-align:left}}th{{background:#e2e8f0}}@media print{{body{{padding:0}}.no-print{{display:none}}h2{{break-after:avoid}}table{{font-size:10pt}}}}</style></head><body>
+<p class='no-print'>Use your browser's Print command to save this report as PDF.</p><h1>Smart Learn Accreditation Report</h1>
+<p class='meta'>Generated at {escape(generated_at)} UTC<br>Generated by {escape(str(current_user.get('email') or current_user.get('id')))}<br>Sources: current CO attainment, PO attainment, student performance, and attendance records.</p>
+<h2>Course Outcome Attainment</h2><table><thead><tr><th>CO</th><th>Description</th><th>Average score</th><th>Students</th></tr></thead><tbody>{co_rows or '<tr><td colspan="4">No CO data available.</td></tr>'}</tbody></table>
+<h2>Program Outcome Attainment</h2><table><thead><tr><th>PO</th><th>Description</th><th>Weighted average</th><th>CO count</th></tr></thead><tbody>{po_rows or '<tr><td colspan="4">No PO data available.</td></tr>'}</tbody></table>
+<h2>Student Evidence</h2><table><thead><tr><th>Student</th><th>Email</th><th>Marks</th><th>Attendance</th><th>Sessions</th></tr></thead><tbody>{''.join(student_rows) or '<tr><td colspan="5">No students available.</td></tr>'}</tbody></table>
+</body></html>"""
+    return HTMLResponse(content=html, headers={"Content-Disposition": "attachment; filename=accreditation_report.html"})
 
 
 # ============= STUDENT SCORES ENDPOINT =============
