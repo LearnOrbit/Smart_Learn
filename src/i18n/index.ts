@@ -1,36 +1,19 @@
-/**
- * i18n provider.
- *
- * One i18next instance, three locales (en, hi, mr), one namespace
- * (`chrome`) for the strings this app actually translates today:
- *
- *   - Sidebar nav labels (DashboardLayout)
- *   - Top-bar items (Sign out, Change language, Notifications)
- *   - Common button / action words (Save, Cancel, Delete, Edit, Search)
- *   - SettingsPage labels (Language, Profile, Security, etc.)
- *
- * Page content (inside individual feature pages) is intentionally NOT
- * in this namespace and is NOT translated — the user chose "sidebar +
- * top bar + page headers" scope for Stage 1 of the AI Academic
- * Intelligence plan. Adding more namespaces later is purely additive
- * (one new JSON file + one `useTranslation("pageFoo")`).
- *
- * Why we don't use `i18next-browser-languagedetector` even though it's
- * installed: we already have `useLanguage` reading from
- * `localStorage["gc_user_settings"].language`, and the `useLanguage`
- * hook is the one place i18next gets told to change language. Two
- * detectors would race; one is enough.
- */
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 
 import en from "./locales/en.json";
 import hi from "./locales/hi.json";
 import mr from "./locales/mr.json";
+import indexEn from "./locales/pages/index/en.json";
+import indexHi from "./locales/pages/index/hi.json";
+import indexMr from "./locales/pages/index/mr.json";
+import authEn from "./locales/pages/auth/en.json";
+import authHi from "./locales/pages/auth/hi.json";
+import authMr from "./locales/pages/auth/mr.json";
+import chatbotEn from "./locales/pages/chatbot/en.json";
+import chatbotHi from "./locales/pages/chatbot/hi.json";
+import chatbotMr from "./locales/pages/chatbot/mr.json";
 
-// Read the language that `useLanguage` already persisted. The hook
-// will call `i18n.changeLanguage()` whenever the user picks a new
-// option, so this initial value is just the first paint.
 const initialLang = (() => {
   try {
     const raw = localStorage.getItem("gc_user_settings");
@@ -48,9 +31,9 @@ void i18n
   .use(initReactI18next)
   .init({
     resources: {
-      en: { chrome: en },
-      hi: { chrome: hi },
-      mr: { chrome: mr },
+      en: { chrome: en, chatbot: chatbotEn, pages: { index: indexEn, auth: authEn, chatbot: chatbotEn } },
+      hi: { chrome: hi, chatbot: chatbotHi, pages: { index: indexHi, auth: authHi, chatbot: chatbotHi } },
+      mr: { chrome: mr, chatbot: chatbotMr, pages: { index: indexMr, auth: authMr, chatbot: chatbotMr } },
     },
     lng: initialLang,
     fallbackLng: "en",
@@ -71,7 +54,6 @@ void i18n
     saveMissing: import.meta.env.DEV,
     missingKeyHandler: (_lngs, ns, key) => {
       if (import.meta.env.DEV) {
-        // eslint-disable-next-line no-console
         console.warn(`[i18n] missing key: ${ns}:${key}`);
       }
     },
@@ -85,7 +67,7 @@ void i18n
  *
  *   1. Add `useTranslation("pages")` in the page component.
  *   2. Call `loadPageNamespace("dashboard")` once on mount.
- *   3. Use `t("dashboard:foo.bar")` (or just `t("foo.bar")` if
+ *   3. Use `t("dashboard:foo.bar")` (or just `t("dashboard.foo.bar")` if
  *      `defaultNS = "pages"` for that component, but we keep the
  *      explicit prefix for grep-ability).
  *
@@ -106,6 +88,7 @@ type PageName =
   | "evaluation"
   | "analytics"
   | "lesAnalytics"
+  | "lesDebug"
   | "scores"
   | "outcomes"
   | "copoMapping"
@@ -121,7 +104,7 @@ type PageName =
   | "notFound"
   | "index";
 
-const loaded = new Set<string>();
+const loaded = new Set<string>(["index", "auth", "chatbot"]);
 
 export async function loadPageNamespace(page: PageName): Promise<void> {
   if (loaded.has(page)) return;
@@ -146,11 +129,12 @@ export async function loadPageNamespace(page: PageName): Promise<void> {
     hi: { pages: { [page]: hiPage.default } },
     mr: { pages: { [page]: mrPage.default } },
   };
-  Object.entries(bundle).forEach(([lng, ns]) => {
-    Object.entries(ns).forEach(([namespace, resources]) => {
-      Object.entries(resources as Record<string, unknown>).forEach(([key, value]) => {
-        i18n.addResourceBundle(lng, namespace, { [key]: value }, true, true);
-      });
+  Object.entries(bundle).forEach(([lng, namespaces]) => {
+    Object.entries(namespaces).forEach(([namespace, resources]) => {
+      i18n.addResourceBundle(lng, namespace, resources, true, true);
+      if (namespace === "pages") {
+        i18n.addResourceBundle(lng, page, resources[page], true, true);
+      }
     });
   });
 }

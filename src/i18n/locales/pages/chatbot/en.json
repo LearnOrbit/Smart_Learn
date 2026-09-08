@@ -47,6 +47,7 @@
     "errorTitle": "Error",
     "errorFallback": "Failed to get response",
     "audioReady": "Audio Overview Ready",
-    "audioReadyDesc": "Your deep dive discussion has been synthesized."
+    "audioReadyDesc": "Your deep dive discussion has been synthesized.",
+    "audioUnavailable": "Audio playback is not supported in this browser."
   }
 }
