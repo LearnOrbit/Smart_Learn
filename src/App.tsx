@@ -27,6 +27,9 @@ import CalendarPage from "./pages/CalendarPage";
 import EnrolledClasses from "./pages/EnrolledClasses";
 import ArchivedClasses from "./pages/ArchivedClasses";
 import SettingsPage from "./pages/SettingsPage";
+import ResearchTrends from "./pages/ResearchTrends";
+import Attendance from "./pages/Attendance";
+import AcademicTools from "./pages/AcademicTools";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 
@@ -63,6 +66,9 @@ const App = () => (
             <Route path="/enrolled" element={<ProtectedRoute><EnrolledClasses /></ProtectedRoute>} />
             <Route path="/archived" element={<ProtectedRoute><ArchivedClasses /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+            <Route path="/research-trends" element={<ProtectedRoute><ResearchTrends /></ProtectedRoute>} />
+            <Route path="/attendance" element={<ProtectedRoute><Attendance /></ProtectedRoute>} />
+            <Route path="/academic-tools" element={<ProtectedRoute><AcademicTools /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

@@ -41,6 +41,7 @@ interface QuestionEval {
   similarity_score: number | null;
   teacher_override: number | null;
   evaluation_feedback: string | null;
+  criteria_results?: Array<{ criterion: string; score: number; max_score: number; matched: boolean }> | null;
 }
 interface ModelSolution {
   id: string;
@@ -329,6 +330,18 @@ export default function EvaluationReview() {
                           <p className="text-xs italic text-muted-foreground">
                             {ev.evaluation_feedback}
                           </p>
+                        )}
+
+                        {ev.criteria_results && ev.criteria_results.length > 0 && (
+                          <div className="space-y-1 rounded border bg-muted/20 p-2 text-xs">
+                            <p className="font-medium text-foreground">Rubric criteria</p>
+                            {ev.criteria_results.map((criterion) => (
+                              <div key={criterion.criterion} className="flex items-center justify-between gap-2 text-muted-foreground">
+                                <span>{criterion.criterion}</span>
+                                <span className={criterion.matched ? "text-emerald-600" : "text-muted-foreground"}>{criterion.score}/{criterion.max_score}</span>
+                              </div>
+                            ))}
+                          </div>
                         )}
 
                         {/* Override controls */}

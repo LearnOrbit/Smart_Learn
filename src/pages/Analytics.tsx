@@ -32,7 +32,6 @@ import {
   ChevronUp,
   Trash2,
   BarChart3,
-  UserPlus,
   ShieldAlert,
   Activity,
 } from "lucide-react";
@@ -91,14 +90,15 @@ const DEFAULT_METRICS: MetricsForm = {
 function averageScore(p: PerformanceData): number {
   // Use weighted academic components (Matching LES Engine weights)
   const w = { marks: 0.25, attendance: 0.15, ia: 0.20, lab: 0.15, assign: 0.10, study: 0.05, mastery: 0.10 };
+  const asPercent = (value: number, maximum: number) => value <= maximum ? (value / maximum) * 100 : value;
 
   return Math.round(
     (p.student_marks * w.marks) +
     (p.attendance * w.attendance) +
-    ((p.internal_assessments / 20) * 100 * w.ia) +
-    ((p.lab_performance / 25) * 100 * w.lab) +
-    ((p.assignment_scores / 10) * 100 * w.assign) +
-    (Math.min((p.study_hours / 168) * 100, 100) * w.study) +
+    (asPercent(p.internal_assessments, 20) * w.ia) +
+    (asPercent(p.lab_performance, 25) * w.lab) +
+    (asPercent(p.assignment_scores, 10) * w.assign) +
+    (Math.min(p.study_hours <= 168 ? (p.study_hours / 168) * 100 : p.study_hours, 100) * w.study) +
     (p.concept_mastery * w.mastery)
   );
 }
@@ -129,6 +129,8 @@ export default function Analytics() {
   const {
     data: students = [],
     isLoading,
+    isError: studentsError,
+    error: studentsQueryError,
   } = useQuery<StudentItem[]>({
     queryKey: ["students-list"],
     queryFn: async () => {
@@ -245,6 +247,16 @@ export default function Analytics() {
             description={t("analytics:teacher.description")}
           />
 
+          {studentsError && (
+            <Card>
+              <CardContent className="py-6 text-sm text-destructive">
+                {studentsQueryError instanceof Error
+                  ? studentsQueryError.message
+                  : "Unable to load analytics. Check that the backend is running."}
+              </CardContent>
+            </Card>
+          )}
+
           {/* Stats cards */}
           <StatCardGrid columns={4}>
             <StatCard
@@ -300,7 +312,6 @@ export default function Analytics() {
               <NoDataEmptyState
                 title={t("analytics:teacher.empty.noStudents")}
                 description={t("analytics:teacher.empty.noStudentsDesc")}
-                icon={UserPlus}
               />
             ) : (
               <NoResultsEmptyState
@@ -478,7 +489,7 @@ export default function Analytics() {
                 <DialogTitle>
                   {editingStudent?.performance
                     ? t("analytics:teacher.dialog.editTitle", { name: editingStudent.name })
-                    : t("analytics:teacher.dialog.enterTitle", { name: editingStudent.name })}
+                    : t("analytics:teacher.dialog.enterTitle", { name: editingStudent?.name || "" })}
                 </DialogTitle>
               </DialogHeader>
               <div className="grid grid-cols-2 gap-4 mt-2">

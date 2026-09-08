@@ -9,7 +9,7 @@ import {
   GraduationCap, LogOut, FileText, Target, BarChart3,
   FileBarChart, Activity, BookOpen, MessageSquare,
   Menu, Sparkles, ClipboardCheck, Bot, TrendingUp, Megaphone,
-  Home, Calendar, Archive, Settings, ScrollText, X, Bell, Search,
+  Home, Calendar, Archive, Settings, ScrollText, X, Bell, Search, Wrench,
 } from "lucide-react";
 import { ReactNode, useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
@@ -74,6 +74,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         { path: "/ai-generator", label: t("nav.aiGenerator"), icon: Bot },
         { path: "/feedback", label: t("nav.feedback"), icon: MessageSquare },
         { path: "/announcements", label: t("nav.announcements"), icon: Megaphone },
+        { path: "/research-trends", label: t("nav.researchTrends"), icon: TrendingUp },
+        { path: "/attendance", label: "Attendance", icon: ClipboardCheck },
+        { path: "/academic-tools", label: "Academic tools", icon: Wrench },
       ],
     },
   ];
@@ -83,9 +86,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       label: t("nav.navigation"),
       items: [
         { path: "/dashboard", label: t("nav.home"), icon: Home },
+        { path: "/scores", label: t("nav.scores"), icon: BarChart3 },
         { path: "/calendar", label: t("nav.calendar"), icon: Calendar },
         { path: "/enrolled", label: t("nav.enrolled"), icon: BookOpen },
         { path: "/archived", label: t("nav.archived"), icon: Archive },
+        { path: "/attendance", label: "Attendance", icon: ClipboardCheck },
+        { path: "/announcements", label: t("nav.announcements"), icon: Megaphone },
         { path: "/settings", label: t("nav.settings"), icon: Settings },
       ],
     },
@@ -93,6 +99,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       label: t("nav.aiTools"),
       items: [
         { path: "/ai-quiz", label: t("nav.aiQuiz"), icon: Bot },
+        { path: "/chatbot", label: "AI tutor", icon: MessageSquare },
+        { path: "/academic-tools", label: "Student support tools", icon: Wrench },
       ],
     },
   ];

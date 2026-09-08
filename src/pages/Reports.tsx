@@ -152,6 +152,12 @@ export default function Reports() {
             <Button variant="outline" size="sm" onClick={() => downloadCSV("/reports/student-performance-csv", "student_performance.csv")}>
               <Download className="h-4 w-4 mr-1" />{t("reports:header.studentsCsv")}
             </Button>
+            <Button variant="default" size="sm" onClick={() => downloadCSV("/reports/accreditation-package", "accreditation_evidence_package.zip")}>
+              <Download className="h-4 w-4 mr-1" />Accreditation package
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => downloadCSV("/reports/accreditation-html", "accreditation_report.html")}>
+              <FileBarChart className="h-4 w-4 mr-1" />Printable report
+            </Button>
           </div>
         </div>
 
