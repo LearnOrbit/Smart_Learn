@@ -100,7 +100,7 @@ class APIClient {
 
   private handleNetworkError(err: unknown, method: string, endpoint: string) {
     console.error(`Network error: ${method} ${this.baseUrl}${endpoint}`, err);
-    const message = `Cannot reach the backend server at ${this.baseUrl}. Make sure the backend is running (uvicorn main:app --reload --port 8002).`;
+    const message = `Cannot reach the backend server at ${this.baseUrl}. Make sure the backend is running on the configured API port.`;
     return { data: null, error: new Error(message) };
   }
 
