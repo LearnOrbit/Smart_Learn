@@ -255,7 +255,27 @@ def quick_quiz(
             source_text=None,
         )
 
-    items = _run_provider(_do)
+    try:
+        items = _run_provider(_do)
+    except HTTPException as exc:
+        # Keep the student quiz usable when the optional Gemini service is
+        # unavailable, misconfigured, rate-limited, or rejects a model.
+        items = [
+            {
+                "question": f"Which study action best demonstrates understanding of {payload.topic}?",
+                "option_a": "Memorizing the topic title only",
+                "option_b": "Explaining the idea and applying it to an example",
+                "option_c": "Skipping practice questions",
+                "option_d": "Reading without checking understanding",
+                "correct_answer": "B",
+                "explanation": "Explaining and applying an idea provides stronger evidence of understanding.",
+                "marks": 1,
+                "difficulty": payload.difficulty,
+                "course_outcome_code": payload.co_code or "CO1",
+                "source_type": "local-fallback",
+            }
+            for _ in range(payload.count)
+        ]
     return {"mcqs": items}
 
 

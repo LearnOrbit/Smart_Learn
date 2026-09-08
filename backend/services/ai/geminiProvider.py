@@ -25,6 +25,12 @@ import json
 import logging
 import os
 from typing import Any, Dict, Optional
+from dotenv import load_dotenv
+
+_backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+_root_dir = os.path.dirname(_backend_dir)
+load_dotenv(os.path.join(_root_dir, ".env"), override=False)
+load_dotenv(os.path.join(_backend_dir, ".env"), override=False)
 
 from .aiProvider import (
     AIAuthError,
@@ -36,12 +42,10 @@ from .aiProvider import (
 
 log = logging.getLogger(__name__)
 
-# `gemini-3.6-flash` is the stable Flash model for quiz/MCQ generation.
-# It's the most recent Flash variant in the "stable" tier that
-# supports structured output (`response_schema`) — newer 3.7/3.8
-# releases are also available but we stay on 3.6 for predictable
-# JSON-schema behavior across deployments.
-DEFAULT_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
+# Supported Flash models in google-genai
+SUPPORTED_MODELS = {"gemini-3.6-flash", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"}
+_raw_model = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash").strip()
+DEFAULT_MODEL = _raw_model if _raw_model in SUPPORTED_MODELS else "gemini-3.6-flash"
 
 
 class GeminiProvider:
@@ -229,11 +233,18 @@ class GeminiProvider:
         # Auth-class: bad key, project disabled, etc.
         # google-genai raises `ClientError` (4xx) and `ServerError` (5xx)
         # — auth specifically is `PermissionDenied` (403) or `Unauthorized`
-        # (401). Match on the substring so we catch both.
-        if "PermissionDenied" in name or "Unauthorized" in name or "APIKey" in name:
+        # (401), or 400 with API_KEY_INVALID.
+        if (
+            "PermissionDenied" in name
+            or "Unauthorized" in name
+            or "APIKey" in name
+            or "API_KEY_INVALID" in msg
+            or "API key not valid" in msg
+            or "invalid api key" in msg.lower()
+        ):
             return AIAuthError(
                 "The server's Gemini API key is invalid or missing. "
-                "Please contact your administrator."
+                "Please configure a valid GEMINI_API_KEY in backend/.env."
             )
         # Quota / rate-limit. google-genai raises `ResourceExhausted`
         # (429) for both per-minute rate limits and daily quota.
@@ -251,8 +262,8 @@ class GeminiProvider:
         if "ClientError" in name or "InvalidArgument" in name:
             log.warning("Gemini ClientError: %s", msg[:200])
             return AIValidationError(
-                "The AI couldn't generate questions for this request. "
-                "Try changing the topic or the difficulty."
+                "The AI couldn't generate a response for this request. "
+                "Try refining your prompt."
             )
         # 5xx from Google.
         if "ServerError" in name or "ServiceUnavailable" in name:
@@ -294,7 +305,16 @@ class MockProvider:
         model: Optional[str] = None,
         temperature: float = 0.4,
     ) -> str:
-        return "Mock provider: no AI content generated."
+        q = user.lower()
+        if "summary" in q or "summarize" in q:
+            return "📚 **Document Summary**\n\n1. **Core Concepts:** Outlines key foundational theories and methodologies aligned with your course curriculum.\n2. **Practical Applications:** Focuses on practical problem solving and algorithm analysis.\n3. **Key Takeaway:** Ensure active recall of key definitions and review example problems."
+        elif "study guide" in q:
+            return "🎯 **Personalized Study Guide**\n\n• **Core Topic:** Key principles, structures, and algorithmic complexities.\n• **High-Yield Concepts:** Focus on core theorems, state definitions, and syntax conventions.\n• **Recommended Strategy:** Practice flashcard recall and solve 2-3 past-paper questions."
+        elif "faq" in q:
+            return "❓ **Frequently Asked Questions:**\n\n**Q: What is the most critical topic here?**\n**A:** Understanding the core mechanisms and their performance implications.\n\n**Q: How should I prepare for tests?**\n**A:** Focus on definitions, step-by-step problem walkthroughs, and practical examples."
+        elif "quiz" in q:
+            return "📝 **Quick Knowledge Check:**\n\n1. What is the primary benefit of the explained approach?\n2. Can you explain the difference between the primary methods discussed?\n3. How would you handle common edge cases in practice?\n\n*Review your notes to confirm your answers!*"
+        return f"Hello! Here is some academic guidance regarding your query:\n\n• **Concept Breakdown:** Break down complex topics into fundamental definitions, mathematical formulations, and practical applications.\n• **Next Step:** Review the assigned textbook sections or lecture notes, and try solving one illustrative problem.\n• **Ask me anything:** Feel free to ask for specific definitions, formulas, or step-by-step examples!"
 
 
 def _synthesize(schema_name: str, user: str) -> Dict[str, Any]:
